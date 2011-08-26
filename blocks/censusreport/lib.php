@@ -506,13 +506,13 @@ function bcr_build_grades_array($courseid, $useridorids = 0, $startdate = 0, $en
         $groupwhere = " AND gm.groupid = {$groupid} ";
     }
 
-    $select  = "SELECT gg.id, gi.id as giid, u.id as userid, u.firstname, u.lastname, u.idnumber, gi.itemname, gg.finalgrade, gg.timemodified ";
+    $select  = "SELECT gg.id, gi.id as giid, u.id as userid, u.firstname, u.lastname, u.idnumber, gi.itemname, gg.finalgrade, gg.timecreated ";
     $from    = "FROM {$CFG->prefix}grade_items gi ";
     $join    = "INNER JOIN {$CFG->prefix}role_assignments ra ";
     $join   .= "INNER JOIN {$CFG->prefix}grade_grades gg ON gg.itemid = gi.id AND gg.userid = ra.userid ";
     $join   .= "INNER JOIN {$CFG->prefix}user u ON u.id = ra.userid ";
     $where   = "WHERE gi.courseid = {$courseid} AND ra.roleid = {$role->id} AND contextid = {$context->id} ".
-    	             "AND gg.timemodified >= {$startdate} AND gg.timemodified <= {$enddate} ";
+    	             "AND gg.timecreated >= {$startdate} AND gg.timecreated <= {$enddate} ";
     $order   = "ORDER BY u.lastname, u.firstname ASC";
 
     $sql     = $select . $from . $join . $groupjoin . $where . $groupwhere . $order;
@@ -531,15 +531,15 @@ function bcr_build_grades_array($courseid, $useridorids = 0, $startdate = 0, $en
         }
 
         /// Only record the oldest record found.
-        if (empty($results[$record->userid]) || ($results[$record->userid]->timemodified > $record->timemodified)) {
+        if (empty($results[$record->userid]) || ($results[$record->userid]->timecreated > $record->timecreated)) {
             $result = new Object();
             $result->userid = $record->userid;
             $result->student = fullname($record);
             $result->studentid = $record->idnumber;
             $result->activity = $record->itemname;
             $result->grade = grade_format_gradevalue($record->finalgrade, &$gis[$record->giid]);
-            $result->timemodified = $record->timemodified;
-            $result->date = strftime('%m/%d/%y', $record->timemodified);
+            $result->timecreated = $record->timecreated;
+            $result->date = strftime('%m/%d/%y', $record->timecreated);
             $results[$record->userid] = $result;
         }
     }
