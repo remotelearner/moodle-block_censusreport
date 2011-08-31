@@ -511,7 +511,7 @@ function bcr_build_grades_array($courseid, $useridorids = 0, $startdate = 0, $en
     $join    = "INNER JOIN {$CFG->prefix}role_assignments ra ";
     $join   .= "INNER JOIN {$CFG->prefix}grade_grades gg ON gg.itemid = gi.id AND gg.userid = ra.userid ";
     $join   .= "INNER JOIN {$CFG->prefix}user u ON u.id = ra.userid ";
-    $where   = "WHERE gi.courseid = {$courseid} AND ra.roleid = {$role->id} AND contextid = {$context->id} ".
+    $where   = "WHERE gi.courseid = {$courseid} AND gi.itemtype=\"mod\" AND ra.roleid = {$role->id} AND contextid = {$context->id} ".
     	             "AND gg.timecreated >= {$startdate} AND gg.timecreated <= {$enddate} ";
     $order   = "ORDER BY u.lastname, u.firstname ASC";
 
@@ -531,7 +531,7 @@ function bcr_build_grades_array($courseid, $useridorids = 0, $startdate = 0, $en
         }
 
         /// Only record the oldest record found.
-        if (empty($results[$record->userid]) || ($results[$record->userid]->timecreated > $record->timecreated)) {
+        if (empty($results[$record->userid]) || ($record->timecreated < $results[$record->userid]->timecreated)) {
             $result = new Object();
             $result->userid = $record->userid;
             $result->student = fullname($record);
