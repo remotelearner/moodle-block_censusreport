@@ -492,58 +492,103 @@ function bcr_generate_report($block, $formdata, $type='view') {
  */
 function bcr_build_grades_array($courseid, $useridorids = 0, $startdate = 0, $enddate = 0, $groupid = 0) {
     global $CFG;
+
     require_once($CFG->dirroot.'/lib/gradelib.php');
     require_once($CFG->dirroot.'/lib/grade/constants.php');
     require_once($CFG->dirroot.'/lib/grade/grade_item.php');
 
     $role    = get_default_course_role($courseid);
     $context = get_context_instance(CONTEXT_COURSE, $courseid);
-
-    $groupjoin = '';
-    $groupwhere = '';
-    if ($groupid != 0) {
-        $groupjoin = "INNER JOIN {$CFG->prefix}groups_members gm ON gm.userid = u.id ";
-        $groupwhere = " AND gm.groupid = {$groupid} ";
-    }
-
-    $select  = "SELECT gg.id, gi.id as giid, u.id as userid, u.firstname, u.lastname, u.idnumber, gi.itemname, gg.finalgrade, gg.timecreated ";
-    $from    = "FROM {$CFG->prefix}grade_items gi ";
-    $join    = "INNER JOIN {$CFG->prefix}role_assignments ra ";
-    $join   .= "INNER JOIN {$CFG->prefix}grade_grades gg ON gg.itemid = gi.id AND gg.userid = ra.userid ";
-    $join   .= "INNER JOIN {$CFG->prefix}user u ON u.id = ra.userid ";
-    $where   = "WHERE gi.courseid = {$courseid} AND gi.itemtype=\"mod\" AND ra.roleid = {$role->id} AND contextid = {$context->id} ".
-    	             "AND gg.timecreated >= {$startdate} AND gg.timecreated <= {$enddate} ";
-    $order   = "ORDER BY u.lastname, u.firstname ASC";
-
-    $sql     = $select . $from . $join . $groupjoin . $where . $groupwhere . $order;
-
     $results = array();
-    $gis = array();
-    $ggs = array();
-    $rs = get_recordset_sql($sql);
-    while ($record = rs_fetch_next_record($rs)) {
+    $gis     = array();
 
-        if (empty($gis[$record->giid])) {
-            $gis[$record->giid] = new grade_item(array('id' => $record->giid));
-        }
-        if (empty($ggs[$record->id])) {
-            $ggs[$record->id] = get_record('grade_grades', 'id', $record->id);
-        }
+    // Pass #1 - Get general grade item records from the DB
+    $sql = "SELECT gg.id, gi.id as giid, u.id as userid, u.firstname, u.lastname, u.idnumber, gi.itemname,
+                   gg.finalgrade, gg.timecreated
+            FROM {$CFG->prefix}grade_items gi
+            INNER JOIN {$CFG->prefix}role_assignments ra
+            INNER JOIN {$CFG->prefix}grade_grades gg ON (gg.itemid = gi.id AND gg.userid = ra.userid)
+            INNER JOIN {$CFG->prefix}user u ON u.id = ra.userid " .
+            ($groupid != 0 ? "INNER JOIN {$CFG->prefix}groups_members gm ON gm.userid = u.id " : '') . "
+            WHERE gi.courseid = {$courseid}
+            AND gi.itemtype = 'mod'
+            AND ra.roleid = {$role->id}
+            AND ra.contextid = {$context->id}
+            AND gg.timecreated >= {$startdate}
+            AND gg.timecreated <= {$enddate} " .
+            ($groupid != 0 ? "AND gm.groupid = {$groupid} " : '') . "
+            GROUP BY gg.userid
+            ORDER BY MIN(gg.timecreated) ASC, u.lastname ASC, u.firstname ASC";
 
-        /// Only record the oldest record found.
-        if (empty($results[$record->userid]) || ($record->timecreated < $results[$record->userid]->timecreated)) {
-            $result = new Object();
-            $result->userid = $record->userid;
-            $result->student = fullname($record);
-            $result->studentid = $record->idnumber;
-            $result->activity = $record->itemname;
-            $result->grade = grade_format_gradevalue($record->finalgrade, &$gis[$record->giid]);
+    if ($rs = get_recordset_sql($sql)) {
+        while ($record = rs_fetch_next_record($rs)) {
+            if (empty($gis[$record->giid])) {
+                $gis[$record->giid] = new grade_item(array('id' => $record->giid));
+            }
+
+            $result = new stdClass;
+            $result->userid      = $record->userid;
+            $result->lastname    = $record->lastname;
+            $result->firstname   = $record->firstname;
+            $result->student     = fullname($record);
+            $result->studentid   = $record->idnumber;
+            $result->activity    = $record->itemname;
+            $result->grade       = grade_format_gradevalue($record->finalgrade, &$gis[$record->giid]);
             $result->timecreated = $record->timecreated;
-            $result->date = strftime('%m/%d/%y', $record->timecreated);
+            $result->date        = strftime('%m/%d/%y', $record->timecreated);
             $results[$record->userid] = $result;
         }
+        rs_close($rs);
     }
-    rs_close($rs);
+
+
+    // Pass #2 - Get any graded forum post records from the DB
+    $sql = "SELECT gg.id, fp.id as postid, gi.id AS giid, u.id as userid, u.firstname, u.lastname, u.idnumber,
+                   gi.itemname, gg.finalgrade, fp.created as timecreated
+            FROM {$CFG->prefix}forum_posts fp
+            INNER JOIN {$CFG->prefix}forum_discussions fd ON fd.id = fp.discussion
+            INNER JOIN {$CFG->prefix}grade_items gi ON gi.iteminstance = fd.forum
+            INNER JOIN {$CFG->prefix}grade_grades gg ON (gg.itemid = gi.id AND gg.userid = fp.userid)
+            INNER JOIN {$CFG->prefix}role_assignments ra ON ra.userid = fp.userid
+            INNER JOIN {$CFG->prefix}user u ON u.id = fp.userid " .
+            ($groupid != 0 ? "INNER JOIN {$CFG->prefix}groups_members gm ON gm.userid = u.id " : '') . "
+            WHERE fd.course = $courseid
+            AND fp.userid != 0
+            AND gi.itemmodule = 'forum'
+            AND ra.contextid = {$context->id}
+            AND fp.created >= $startdate
+            AND fp.created <= $enddate " .
+            ($groupid != 0 ? "AND gm.groupid = {$groupid} " : '') . "
+            GROUP BY fp.userid
+            ORDER BY fp.created ASC, u.lastname ASC, u.firstname ASC";
+
+    if ($rs = get_recordset_sql($sql)) {
+        while ($record = rs_fetch_next_record($rs)) {
+            if (empty($gis[$record->giid])) {
+                $gis[$record->giid] = new grade_item(array('id' => $record->giid));
+            }
+
+            /// Only record the oldest record found.
+            if (empty($results[$record->userid]) || ($record->timecreated < $results[$record->userid]->timecreated)) {
+                $result = new stdClass;
+                $result->userid      = $record->userid;
+                $result->lastname    = $record->lastname;
+                $result->firstname   = $record->firstname;
+                $result->student     = fullname($record);
+                $result->studentid   = $record->idnumber;
+                $result->activity    = $record->itemname;
+                $result->grade       = grade_format_gradevalue($record->finalgrade, &$gis[$record->giid]);
+                $result->timecreated = $record->timecreated;
+                $result->date        = strftime('%m/%d/%y', $record->timecreated);
+                $results[$record->userid] = $result;
+            }
+        }
+
+        rs_close($rs);
+    }
+
+    // Sort the resulting data by using a "lastname ASC, firstname ASC" sorting algorithm
+    usort($results, 'bcr_results_sort');
 
     return $results;
 }
@@ -564,4 +609,30 @@ function bcr_csv_escape_string($input) {
 
     return $input;
 }
+
+/**
+ * Sorts the results fetched from the main data-gathering function.
+ *
+ * The results must contain a 'firstname' and 'lastname' property for proper sorting.
+ *
+ * @param array $results A reference to the array of results.
+ */
+function bcr_results_sort($a, $b) {
+    $a1 = strtolower($a->lastname);
+    $b1 = strtolower($b->lastname);
+    $a2 = strtolower($a->firstname);
+    $b2 = strtolower($b->lastname);
+
+    // Compare the lastname values
+    $comp = strcmp($a1, $b1);
+
+    if ($comp == 0) {
+        // If they are equal, return the comparison between the firstname values
+        return strcmp($a2, $b2);
+    } else {
+        // Otherwise, return the lastname comparison value as-is
+        return $comp;
+    }
+}
+
 ?>
