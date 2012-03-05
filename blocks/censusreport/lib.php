@@ -497,28 +497,28 @@ function bcr_build_grades_array($courseid, $useridorids = 0, $startdate = 0, $en
     require_once($CFG->dirroot.'/lib/grade/constants.php');
     require_once($CFG->dirroot.'/lib/grade/grade_item.php');
 
-    $role    = get_default_course_role($courseid);
-    $context = get_context_instance(CONTEXT_COURSE, $courseid);
-    $results = array();
-    $gis     = array();
+    $role           = get_default_course_role($courseid);
+    $context        = get_context_instance(CONTEXT_COURSE, $courseid);
+    $results        = array();
+    $gis            = array();
 
-    // Pass #1 - Get general grade item records from the DB
-    $sql = "SELECT gg.id, gi.id as giid, u.id as userid, u.firstname, u.lastname, u.idnumber, gi.itemname,
-                   gg.finalgrade, gg.timecreated
+    // Pass #1 - Search through grade_grades_history for grade data
+    $sql = "SELECT ggh.id, gi.id as giid, u.id as userid, u.firstname, u.lastname, u.idnumber, gi.itemname,
+                   ggh.finalgrade, ggh.timemodified AS timecreated
             FROM {$CFG->prefix}grade_items gi
             INNER JOIN {$CFG->prefix}role_assignments ra
-            INNER JOIN {$CFG->prefix}grade_grades gg ON (gg.itemid = gi.id AND gg.userid = ra.userid)
+            INNER JOIN {$CFG->prefix}grade_grades_history ggh ON (ggh.itemid = gi.id AND ggh.userid = ra.userid)
             INNER JOIN {$CFG->prefix}user u ON u.id = ra.userid " .
             ($groupid != 0 ? "INNER JOIN {$CFG->prefix}groups_members gm ON gm.userid = u.id " : '') . "
             WHERE gi.courseid = {$courseid}
             AND gi.itemtype = 'mod'
             AND ra.roleid = {$role->id}
             AND ra.contextid = {$context->id}
-            AND gg.timecreated >= {$startdate}
-            AND gg.timecreated <= {$enddate} " .
+            AND ggh.timemodified >= {$startdate}
+            AND ggh.timemodified <= {$enddate} " .
             ($groupid != 0 ? "AND gm.groupid = {$groupid} " : '') . "
-            GROUP BY gg.userid
-            ORDER BY MIN(gg.timecreated) ASC, u.lastname ASC, u.firstname ASC";
+            GROUP BY userid
+            ORDER BY ggh.timemodified ASC, u.lastname ASC, u.firstname ASC";
 
     if ($rs = get_recordset_sql($sql)) {
         while ($record = rs_fetch_next_record($rs)) {
@@ -542,17 +542,69 @@ function bcr_build_grades_array($courseid, $useridorids = 0, $startdate = 0, $en
     }
 
 
-    // Pass #2 - Get any graded forum post records from the DB
+    // Pass #2 - Get general grade item records from the DB and compare dates with grade_grades_history entries
+    $sql = "SELECT gg.id, gi.id as giid, u.id as userid, u.firstname, u.lastname, u.idnumber, gi.itemname,
+                   gg.finalgrade, gg.timecreated, gg.timemodified
+            FROM {$CFG->prefix}grade_items gi
+            INNER JOIN {$CFG->prefix}role_assignments ra
+            INNER JOIN {$CFG->prefix}grade_grades gg ON (gg.itemid = gi.id AND gg.userid = ra.userid)
+            INNER JOIN {$CFG->prefix}user u ON u.id = ra.userid " .
+            ($groupid != 0 ? "INNER JOIN {$CFG->prefix}groups_members gm ON gm.userid = u.id " : '') . "
+            WHERE gi.courseid = {$courseid}
+            AND gi.itemtype = 'mod'
+            AND ra.roleid = {$role->id}
+            AND ra.contextid = {$context->id}
+            AND ( ( gg.timecreated >= {$startdate} AND gg.timecreated <= {$enddate} )
+            OR  ( gg.timemodified >= {$startdate} AND gg.timemodified <= {$enddate} ) )" .
+            ($groupid != 0 ? "AND gm.groupid = {$groupid} " : '') . "
+            GROUP BY gg.userid
+            ORDER BY MIN(gg.timecreated) ASC, u.lastname ASC, u.firstname ASC";
+
+    if ($rs = get_recordset_sql($sql)) {
+        while ($record = rs_fetch_next_record($rs)) {
+            if (empty($gis[$record->giid])) {
+                $gis[$record->giid] = new grade_item(array('id' => $record->giid));
+            }
+
+            $time = empty($record->timecreated) ? $record->timemodified : $record->timecreated;
+
+            if (empty($results[$record->userid])) {
+
+                $result = new stdClass;
+                $result->userid      = $record->userid;
+                $result->lastname    = $record->lastname;
+                $result->firstname   = $record->firstname;
+                $result->student     = fullname($record);
+                $result->studentid   = $record->idnumber;
+                $result->activity    = $record->itemname;
+                $result->grade       = grade_format_gradevalue($record->finalgrade, &$gis[$record->giid]);
+                $result->timecreated = $time;
+                $result->date        = strftime('%m/%d/%y', $record->timecreated);
+                $results[$record->userid] = $result;
+            } else if ($record->timecreated < $results[$record->userid]->timecreated) {
+
+                $results[$record->userid]->activity = $record->itemname;
+                $results[$record->userid]->grade = grade_format_gradevalue($record->finalgrade, &$gis[$record->giid]);
+                $results[$record->userid]->timecreated = $time;
+
+            }
+        }
+        rs_close($rs);
+    }
+
+    // Pass #3 - Get any graded forum post records from the DB
     $sql = "SELECT gg.id, fp.id as postid, gi.id AS giid, u.id as userid, u.firstname, u.lastname, u.idnumber,
                    gi.itemname, gg.finalgrade, fp.created as timecreated
             FROM {$CFG->prefix}forum_posts fp
             INNER JOIN {$CFG->prefix}forum_discussions fd ON fd.id = fp.discussion
+            INNER JOIN {$CFG->prefix}forum f ON f.id = fd.forum
             INNER JOIN {$CFG->prefix}grade_items gi ON gi.iteminstance = fd.forum
             INNER JOIN {$CFG->prefix}grade_grades gg ON (gg.itemid = gi.id AND gg.userid = fp.userid)
             INNER JOIN {$CFG->prefix}role_assignments ra ON ra.userid = fp.userid
             INNER JOIN {$CFG->prefix}user u ON u.id = fp.userid " .
             ($groupid != 0 ? "INNER JOIN {$CFG->prefix}groups_members gm ON gm.userid = u.id " : '') . "
             WHERE fd.course = $courseid
+            AND f.assessed > 5
             AND fp.userid != 0
             AND gi.itemmodule = 'forum'
             AND ra.contextid = {$context->id}
@@ -564,12 +616,14 @@ function bcr_build_grades_array($courseid, $useridorids = 0, $startdate = 0, $en
 
     if ($rs = get_recordset_sql($sql)) {
         while ($record = rs_fetch_next_record($rs)) {
+
             if (empty($gis[$record->giid])) {
                 $gis[$record->giid] = new grade_item(array('id' => $record->giid));
             }
 
             /// Only record the oldest record found.
             if (empty($results[$record->userid]) || ($record->timecreated < $results[$record->userid]->timecreated)) {
+
                 $result = new stdClass;
                 $result->userid      = $record->userid;
                 $result->lastname    = $record->lastname;
