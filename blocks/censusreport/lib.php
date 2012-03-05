@@ -566,6 +566,7 @@ function bcr_build_grades_array($courseid, $useridorids = 0, $startdate = 0, $en
                 $gis[$record->giid] = new grade_item(array('id' => $record->giid));
             }
 
+            // Some graded items only use the timemodified field and a null value for the timecreated field
             $time = empty($record->timecreated) ? $record->timemodified : $record->timecreated;
 
             if (empty($results[$record->userid])) {
@@ -581,7 +582,7 @@ function bcr_build_grades_array($courseid, $useridorids = 0, $startdate = 0, $en
                 $result->timecreated = $time;
                 $result->date        = strftime('%m/%d/%y', $record->timecreated);
                 $results[$record->userid] = $result;
-            } else if ($record->timecreated < $results[$record->userid]->timecreated) {
+            } else if ($time < $results[$record->userid]->timecreated) {
 
                 $results[$record->userid]->activity = $record->itemname;
                 $results[$record->userid]->grade = grade_format_gradevalue($record->finalgrade, &$gis[$record->giid]);
@@ -597,14 +598,12 @@ function bcr_build_grades_array($courseid, $useridorids = 0, $startdate = 0, $en
                    gi.itemname, gg.finalgrade, fp.created as timecreated
             FROM {$CFG->prefix}forum_posts fp
             INNER JOIN {$CFG->prefix}forum_discussions fd ON fd.id = fp.discussion
-            INNER JOIN {$CFG->prefix}forum f ON f.id = fd.forum
             INNER JOIN {$CFG->prefix}grade_items gi ON gi.iteminstance = fd.forum
             INNER JOIN {$CFG->prefix}grade_grades gg ON (gg.itemid = gi.id AND gg.userid = fp.userid)
             INNER JOIN {$CFG->prefix}role_assignments ra ON ra.userid = fp.userid
             INNER JOIN {$CFG->prefix}user u ON u.id = fp.userid " .
             ($groupid != 0 ? "INNER JOIN {$CFG->prefix}groups_members gm ON gm.userid = u.id " : '') . "
             WHERE fd.course = $courseid
-            AND f.assessed > 5
             AND fp.userid != 0
             AND gi.itemmodule = 'forum'
             AND ra.contextid = {$context->id}
