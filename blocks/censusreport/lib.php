@@ -515,16 +515,30 @@ function bcr_build_grades_array($courseid, $useridorids = 0, $startdate = 0, $en
             AND ra.roleid = {$role->id}
             AND ra.contextid = {$context->id}
             AND ggh.timemodified >= {$startdate}
-            AND ggh.timemodified <= {$enddate} " .
+            AND ggh.timemodified <= {$enddate}
+            AND NOT ISNULL(ggh.finalgrade) " .
             ($groupid != 0 ? "AND gm.groupid = {$groupid} " : '') . "
             GROUP BY userid
             ORDER BY ggh.timemodified ASC, u.lastname ASC, u.firstname ASC";
 
     if ($rs = get_recordset_sql($sql)) {
         while ($record = rs_fetch_next_record($rs)) {
+
             if (empty($gis[$record->giid])) {
                 $gis[$record->giid] = new grade_item(array('id' => $record->giid));
             }
+
+                var_dump($record->finalgrade);
+
+            // If final grade is zero, check grades_history for a non-zero final grade value that occured
+            // within that same day
+            if (0 == $record->finalgrade) {
+
+                $record = bcr_check_for_non_null_grade($courseid, $record->userid,
+                                                       $record->timemodifed, $groupid);
+
+            }
+
 
             $result = new stdClass;
             $result->userid      = $record->userid;
@@ -538,6 +552,7 @@ function bcr_build_grades_array($courseid, $useridorids = 0, $startdate = 0, $en
             $result->date        = strftime('%m/%d/%y', $record->timecreated);
             $results[$record->userid] = $result;
         }
+
         rs_close($rs);
     }
 
@@ -594,16 +609,18 @@ function bcr_build_grades_array($courseid, $useridorids = 0, $startdate = 0, $en
     }
 
     // Pass #3 - Get any graded forum post records from the DB
-    $sql = "SELECT gg.id, fp.id as postid, gi.id AS giid, u.id as userid, u.firstname, u.lastname, u.idnumber,
+    $sql = "SELECT u.id as userid, fp.id as postid, gi.id AS giid, u.firstname, u.lastname, u.idnumber,
                    gi.itemname, gg.finalgrade, fp.created as timecreated
             FROM {$CFG->prefix}forum_posts fp
             INNER JOIN {$CFG->prefix}forum_discussions fd ON fd.id = fp.discussion
+            INNER JOIN {$CFG->prefix}forum f ON f.id = fd.forum
             INNER JOIN {$CFG->prefix}grade_items gi ON gi.iteminstance = fd.forum
-            INNER JOIN {$CFG->prefix}grade_grades gg ON (gg.itemid = gi.id AND gg.userid = fp.userid)
+            LEFT JOIN {$CFG->prefix}grade_grades gg ON (gg.itemid = gi.id AND gg.userid = fp.userid)
             INNER JOIN {$CFG->prefix}role_assignments ra ON ra.userid = fp.userid
             INNER JOIN {$CFG->prefix}user u ON u.id = fp.userid " .
             ($groupid != 0 ? "INNER JOIN {$CFG->prefix}groups_members gm ON gm.userid = u.id " : '') . "
             WHERE fd.course = $courseid
+            AND f.assessed > 0
             AND fp.userid != 0
             AND gi.itemmodule = 'forum'
             AND ra.contextid = {$context->id}
@@ -612,6 +629,7 @@ function bcr_build_grades_array($courseid, $useridorids = 0, $startdate = 0, $en
             ($groupid != 0 ? "AND gm.groupid = {$groupid} " : '') . "
             GROUP BY fp.userid
             ORDER BY fp.created ASC, u.lastname ASC, u.firstname ASC";
+
 
     if ($rs = get_recordset_sql($sql)) {
         while ($record = rs_fetch_next_record($rs)) {
@@ -623,6 +641,9 @@ function bcr_build_grades_array($courseid, $useridorids = 0, $startdate = 0, $en
             /// Only record the oldest record found.
             if (empty($results[$record->userid]) || ($record->timecreated < $results[$record->userid]->timecreated)) {
 
+                $grade = empty($record->finalgrade) ? get_string('nograde', 'block_censusreport') :
+                    grade_format_gradevalue($record->finalgrade, &$gis[$record->giid]);
+
                 $result = new stdClass;
                 $result->userid      = $record->userid;
                 $result->lastname    = $record->lastname;
@@ -630,7 +651,7 @@ function bcr_build_grades_array($courseid, $useridorids = 0, $startdate = 0, $en
                 $result->student     = fullname($record);
                 $result->studentid   = $record->idnumber;
                 $result->activity    = $record->itemname;
-                $result->grade       = grade_format_gradevalue($record->finalgrade, &$gis[$record->giid]);
+                $result->grade       = $grade;
                 $result->timecreated = $record->timecreated;
                 $result->date        = strftime('%m/%d/%y', $record->timecreated);
                 $results[$record->userid] = $result;
@@ -645,6 +666,40 @@ function bcr_build_grades_array($courseid, $useridorids = 0, $startdate = 0, $en
 
     return $results;
 }
+
+/**
+ * Check grade_grades_history table for a non null grade record created within
+ * the same day as the null grade record's timemodifed timestamp
+ *
+ * For example: There are scenarios where the a grade_grades_history record has
+ * a NULL value for the finalgrade.  When this happens we need to perform an
+ * additional check for non-null grade_grades_history records that have occured
+ * within
+ *
+ */
+function bcr_check_for_non_null_grade($courseid, $startdate, $groupid) {
+
+    // Calculate the end of the day from the start date
+    $endofday  = mktime(23, 59, 59,
+                        date("m", $startdate),
+                        date("d", $startdate),
+                        date("Y", $startdate));
+    $sql = "SELECT u.id as userid, u.firstname, u.lastname, u.idnumber, gi.itemname,
+                   ggh.finalgrade, ggh.timemodified as timecreated
+            FROM {$CFG->prefix}grade_items gi
+            INNER JOIN {$CFG->prefix}grade_grades_history ggh ON ggh.itemid = gi.id
+            INNER JOIN {$CFG->prefix}user u ON u.id = ggh.userid ".
+            ($groupid != 0 ? "INNER JOIN {$CFG->prefix}groups_members gm ON gm.userid = u.id " : '') . "
+            WHERE gi.courseid = {$courseid}
+            AND gi.itemtype = 'mod'
+            AND u.id = {$record->userid}
+            AND ggh.timemodified >= {$startdate}
+            AND ggh.timemodified <= {$endofday} " .
+            ($groupid != 0 ? "AND gm.groupid = {$groupid} " : '') . "
+            GROUP BY userid
+            ORDER BY ggh.timemodified ASC, u.lastname ASC, u.firstname ASC";
+}
+
 
 /**
  * Makes a string safe for CSV output.
