@@ -528,17 +528,13 @@ function bcr_build_grades_array($courseid, $useridorids = 0, $startdate = 0, $en
                 $gis[$record->giid] = new grade_item(array('id' => $record->giid));
             }
 
-                var_dump($record->finalgrade);
-
             // If final grade is zero, check grades_history for a non-zero final grade value that occured
             // within that same day
             if (0 == $record->finalgrade) {
 
                 $record = bcr_check_for_non_null_grade($courseid, $record->userid,
-                                                       $record->timemodifed, $groupid);
-
+                                                       $record->timecreated, $groupid);
             }
-
 
             $result = new stdClass;
             $result->userid      = $record->userid;
@@ -677,27 +673,32 @@ function bcr_build_grades_array($courseid, $useridorids = 0, $startdate = 0, $en
  * within
  *
  */
-function bcr_check_for_non_null_grade($courseid, $startdate, $groupid) {
+function bcr_check_for_non_null_grade($courseid, $userid, $startdate, $groupid) {
+    global $CFG;
 
-    // Calculate the end of the day from the start date
+
     $endofday  = mktime(23, 59, 59,
                         date("m", $startdate),
                         date("d", $startdate),
                         date("Y", $startdate));
-    $sql = "SELECT u.id as userid, u.firstname, u.lastname, u.idnumber, gi.itemname,
-                   ggh.finalgrade, ggh.timemodified as timecreated
+
+    $sql = "SELECT u.id as userid, u.firstname, u.lastname, u.idnumber, gi.id as giid,
+                   gi.itemname, ggh.finalgrade, ggh.timemodified as timecreated
             FROM {$CFG->prefix}grade_items gi
             INNER JOIN {$CFG->prefix}grade_grades_history ggh ON ggh.itemid = gi.id
             INNER JOIN {$CFG->prefix}user u ON u.id = ggh.userid ".
             ($groupid != 0 ? "INNER JOIN {$CFG->prefix}groups_members gm ON gm.userid = u.id " : '') . "
             WHERE gi.courseid = {$courseid}
             AND gi.itemtype = 'mod'
-            AND u.id = {$record->userid}
-            AND ggh.timemodified >= {$startdate}
-            AND ggh.timemodified <= {$endofday} " .
+            AND u.id = {$userid}
+            AND ggh.timemodified > {$startdate}
+            AND ggh.timemodified <= {$endofday}
+            AND NOT ISNULL(ggh.finalgrade) " .
             ($groupid != 0 ? "AND gm.groupid = {$groupid} " : '') . "
             GROUP BY userid
             ORDER BY ggh.timemodified ASC, u.lastname ASC, u.firstname ASC";
+
+    return get_record_sql($sql);
 }
 
 
