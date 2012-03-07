@@ -515,8 +515,7 @@ function bcr_build_grades_array($courseid, $useridorids = 0, $startdate = 0, $en
             AND ra.roleid = {$role->id}
             AND ra.contextid = {$context->id}
             AND ggh.timemodified >= {$startdate}
-            AND ggh.timemodified <= {$enddate}
-            AND NOT ISNULL(ggh.finalgrade) " .
+            AND ggh.timemodified <= {$enddate} " .
             ($groupid != 0 ? "AND gm.groupid = {$groupid} " : '') . "
             GROUP BY userid
             ORDER BY ggh.timemodified ASC, u.lastname ASC, u.firstname ASC";
@@ -528,13 +527,20 @@ function bcr_build_grades_array($courseid, $useridorids = 0, $startdate = 0, $en
                 $gis[$record->giid] = new grade_item(array('id' => $record->giid));
             }
 
-            // If final grade is zero, check grades_history for a non-zero final grade value that occured
-            // within that same day
-            if (0 == $record->finalgrade) {
 
-                $record = bcr_check_for_non_null_grade($courseid, $record->userid,
-                                                       $record->timecreated, $groupid);
+            // If final grade is NULL or zero, check grades_history for a non-zero final grade value that occured
+            // within that same day.  This condition seems to work for NULL as well.
+            if (is_null($record->finalgrade) || 0 == $record->finalgrade) {
+
+                 $non_null_record = bcr_check_for_non_null_grade($courseid, $record->userid,
+                                                                 $record->timecreated, $groupid);
+
+                 $record = !empty($non_null_record) ? $non_null_record : $record;
             }
+
+            $grade = is_null($record->finalgrade) || 0 == $record->finalgrade ?
+                        get_string('nograde', 'block_censusreport') :
+                        grade_format_gradevalue($record->finalgrade, &$gis[$record->giid]);
 
             $result = new stdClass;
             $result->userid      = $record->userid;
@@ -543,7 +549,7 @@ function bcr_build_grades_array($courseid, $useridorids = 0, $startdate = 0, $en
             $result->student     = fullname($record);
             $result->studentid   = $record->idnumber;
             $result->activity    = $record->itemname;
-            $result->grade       = grade_format_gradevalue($record->finalgrade, &$gis[$record->giid]);
+            $result->grade       = $grade;
             $result->timecreated = $record->timecreated;
             $result->date        = strftime('%m/%d/%y', $record->timecreated);
             $results[$record->userid] = $result;
@@ -693,7 +699,7 @@ function bcr_check_for_non_null_grade($courseid, $userid, $startdate, $groupid) 
             AND u.id = {$userid}
             AND ggh.timemodified > {$startdate}
             AND ggh.timemodified <= {$endofday}
-            AND NOT ISNULL(ggh.finalgrade) " .
+            AND NOT ISNULL(ggh.finalgrade) " . // We only want non null values
             ($groupid != 0 ? "AND gm.groupid = {$groupid} " : '') . "
             GROUP BY userid
             ORDER BY ggh.timemodified ASC, u.lastname ASC, u.firstname ASC";
