@@ -699,6 +699,7 @@ function bcr_check_for_non_null_grade($courseid, $userid, $startdate, $groupid) 
             AND u.id = {$userid}
             AND ggh.timemodified > {$startdate}
             AND ggh.timemodified <= {$endofday}
+            AND ggh.finalgrade > 0
             AND NOT ISNULL(ggh.finalgrade) " . // We only want non null values
             ($groupid != 0 ? "AND gm.groupid = {$groupid} " : '') . "
             GROUP BY userid
