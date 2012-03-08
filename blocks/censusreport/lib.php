@@ -533,7 +533,8 @@ function bcr_build_grades_array($courseid, $useridorids = 0, $startdate = 0, $en
             if (is_null($record->finalgrade) || 0 == $record->finalgrade) {
 
                  $non_null_record = bcr_check_for_non_null_grade($courseid, $record->userid,
-                                                                 $record->timecreated, $groupid);
+                                                                 $record->timecreated, $enddate,
+                                                                 $groupid);
 
                  $record = !empty($non_null_record) ? $non_null_record : $record;
             }
@@ -541,6 +542,8 @@ function bcr_build_grades_array($courseid, $useridorids = 0, $startdate = 0, $en
             $grade = is_null($record->finalgrade) || 0 == $record->finalgrade ?
                         get_string('nograde', 'block_censusreport') :
                         grade_format_gradevalue($record->finalgrade, &$gis[$record->giid]);
+
+
 
             $result = new stdClass;
             $result->userid      = $record->userid;
@@ -553,6 +556,7 @@ function bcr_build_grades_array($courseid, $useridorids = 0, $startdate = 0, $en
             $result->timecreated = $record->timecreated;
             $result->date        = strftime('%m/%d/%y', $record->timecreated);
             $results[$record->userid] = $result;
+
         }
 
         rs_close($rs);
@@ -626,8 +630,8 @@ function bcr_build_grades_array($courseid, $useridorids = 0, $startdate = 0, $en
             AND fp.userid != 0
             AND gi.itemmodule = 'forum'
             AND ra.contextid = {$context->id}
-            AND fp.created >= $startdate
-            AND fp.created <= $enddate " .
+            AND fp.created >= {$startdate}
+            AND fp.created <= {$enddate} " .
             ($groupid != 0 ? "AND gm.groupid = {$groupid} " : '') . "
             GROUP BY fp.userid
             ORDER BY fp.created ASC, u.lastname ASC, u.firstname ASC";
@@ -671,22 +675,16 @@ function bcr_build_grades_array($courseid, $useridorids = 0, $startdate = 0, $en
 
 /**
  * Check grade_grades_history table for a non null grade record created within
- * the same day as the null grade record's timemodifed timestamp
+ * the same date range
  *
  * For example: There are scenarios where the a grade_grades_history record has
  * a NULL value for the finalgrade.  When this happens we need to perform an
  * additional check for non-null grade_grades_history records that have occured
- * within
+ * within the same date range as the initial search
  *
  */
-function bcr_check_for_non_null_grade($courseid, $userid, $startdate, $groupid) {
+function bcr_check_for_non_null_grade($courseid, $userid, $startdate, $enddate, $groupid) {
     global $CFG;
-
-
-    $endofday  = mktime(23, 59, 59,
-                        date("m", $startdate),
-                        date("d", $startdate),
-                        date("Y", $startdate));
 
     $sql = "SELECT u.id as userid, u.firstname, u.lastname, u.idnumber, gi.id as giid,
                    gi.itemname, ggh.finalgrade, ggh.timemodified as timecreated
@@ -698,7 +696,7 @@ function bcr_check_for_non_null_grade($courseid, $userid, $startdate, $groupid) 
             AND gi.itemtype = 'mod'
             AND u.id = {$userid}
             AND ggh.timemodified > {$startdate}
-            AND ggh.timemodified <= {$endofday}
+            AND ggh.timemodified <= {$enddate}
             AND ggh.finalgrade > 0
             AND NOT ISNULL(ggh.finalgrade) " . // We only want non null values
             ($groupid != 0 ? "AND gm.groupid = {$groupid} " : '') . "
