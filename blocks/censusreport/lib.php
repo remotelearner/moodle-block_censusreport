@@ -523,11 +523,6 @@ function bcr_build_grades_array($courseid, $useridorids = 0, $startdate = 0, $en
     if ($rs = get_recordset_sql($sql)) {
         while ($record = rs_fetch_next_record($rs)) {
 
-            if (empty($gis[$record->giid])) {
-                $gis[$record->giid] = new grade_item(array('id' => $record->giid));
-            }
-
-
             // If final grade is NULL or zero, check grades_history for a non-zero final grade value that occured
             // within that same day.  This condition seems to work for NULL as well.
             if (is_null($record->finalgrade) || 0 == $record->finalgrade) {
@@ -537,6 +532,10 @@ function bcr_build_grades_array($courseid, $useridorids = 0, $startdate = 0, $en
                                                                  $groupid);
 
                  $record = !empty($non_null_record) ? $non_null_record : $record;
+            }
+
+            if (empty($gis[$record->giid])) {
+                $gis[$record->giid] = new grade_item(array('id' => $record->giid));
             }
 
             $grade = is_null($record->finalgrade) || 0 == $record->finalgrade ?
@@ -603,7 +602,9 @@ function bcr_build_grades_array($courseid, $useridorids = 0, $startdate = 0, $en
                 $result->timecreated = $time;
                 $result->date        = strftime('%m/%d/%y', $record->timecreated);
                 $results[$record->userid] = $result;
-            } else if ($time < $results[$record->userid]->timecreated) {
+            } else if ($time < $results[$record->userid]->timecreated &&
+                       !is_null($record->finalgrade) &&
+                       0 < $record->finalgrade) {
 
                 $results[$record->userid]->activity = $record->itemname;
                 $results[$record->userid]->grade = grade_format_gradevalue($record->finalgrade, &$gis[$record->giid]);
