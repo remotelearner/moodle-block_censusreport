@@ -522,7 +522,7 @@ function bcr_build_grades_array($courseid, $useridorids = 0, $startdate = 0, $en
         while ($user = rs_fetch_next_record($rs)) {
 
             // Find the first submission by that user
-            $record = bcr_check_grades_histories_initial_submission($user->userid, $startdate, $enddate);
+            $record = bcr_check_grades_histories_initial_submission($user->userid, $startdate, $enddate, $courseid);
 
             if (!isset($record->giid)) {
                 continue; // This shouldn't happen
@@ -680,11 +680,12 @@ function bcr_build_grades_array($courseid, $useridorids = 0, $startdate = 0, $en
  * @param int - user id
  * @param int - start date timestamp
  * @param int - end date timestamp
+ * @param int - course id
  *
  * @return object - properties grade item id, user id, grade item name, final
  * grade and time created OR and empty object if no records were found
  */
-function bcr_check_grades_histories_initial_submission($userid, $startdate, $enddate) {
+function bcr_check_grades_histories_initial_submission($userid, $startdate, $enddate, $courseid) {
     global $CFG;
 
     $result = new stdClass();
@@ -696,6 +697,7 @@ function bcr_check_grades_histories_initial_submission($userid, $startdate, $end
             FROM {$CFG->prefix}grade_items gi
             INNER JOIN {$CFG->prefix}grade_grades_history ggh ON ggh.itemid = gi.id
             WHERE ggh.userid = {$userid}
+            AND gi.courseid = {$courseid}
             AND gi.itemtype = 'mod'
             AND ggh.timemodified >= {$startdate}
             AND ggh.timemodified < {$enddate}
