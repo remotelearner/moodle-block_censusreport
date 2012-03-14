@@ -360,7 +360,7 @@ function bcr_generate_report($block, $formdata, $type='view') {
 
         echo '<br /><br /><div align="center">'
            . '<a href="'.$CFG->wwwroot.'/blocks/censusreport/report.php?id='.$formdata->id
-           . ((isset($block->instance)) ? '&instanceid='. $block->instance->id : '') .'">Back to reports</a></div>';
+           . ((isset($block->instance) && !empty($block->instance)) ? '&instanceid='. $block->instance->id : '') .'">Back to reports</a></div>';
 
         print_footer();
 
