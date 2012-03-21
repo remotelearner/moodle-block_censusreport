@@ -502,9 +502,8 @@ function bcr_build_grades_array($courseid, $useridorids = 0, $startdate = 0, $en
     $results        = array();
     $gis            = array();
 
-    // Pass #1 - Search through grade_grades_history for grade data
-    $sql = "SELECT ggh.id, gi.id as giid, u.id as userid, u.firstname, u.lastname, u.idnumber, gi.itemname,
-                   ggh.finalgrade, ggh.timemodified AS timecreated
+    // Pass #1 - Search through grade_grades_history data for user submissions with the date range
+    $sql = "SELECT DISTINCT(u.id) AS userid, u.lastname, u.firstname, u.idnumber
             FROM {$CFG->prefix}grade_items gi
             INNER JOIN {$CFG->prefix}role_assignments ra
             INNER JOIN {$CFG->prefix}grade_grades_history ggh ON (ggh.itemid = gi.id AND ggh.userid = ra.userid)
@@ -517,32 +516,33 @@ function bcr_build_grades_array($courseid, $useridorids = 0, $startdate = 0, $en
             AND ggh.timemodified >= {$startdate}
             AND ggh.timemodified <= {$enddate} " .
             ($groupid != 0 ? "AND gm.groupid = {$groupid} " : '') . "
-            GROUP BY userid
             ORDER BY ggh.timemodified ASC, u.lastname ASC, u.firstname ASC";
 
     if ($rs = get_recordset_sql($sql)) {
-        while ($record = rs_fetch_next_record($rs)) {
+        while ($user = rs_fetch_next_record($rs)) {
 
-            // If final grade is NULL or zero, check grades_history for a non-zero final grade value that occured
-            // within that same day.  This condition seems to work for NULL as well.
-            if (is_null($record->finalgrade) || 0 == $record->finalgrade) {
+            // Find the first submission by that user
+            $record = bcr_check_grades_histories_initial_submission($user->userid, $startdate, $enddate);
 
-                 $non_null_record = bcr_check_for_non_null_grade($courseid, $record->userid,
-                                                                 $record->timecreated, $enddate,
-                                                                 $groupid);
-
-                 $record = !empty($non_null_record) ? $non_null_record : $record;
+            if (!isset($record->giid)) {
+                continue; // This shouldn't happen
             }
+
+            $record->lastname  = $user->lastname;
+            $record->firstname = $user->firstname;
+            $record->idnumber  = $user->idnumber;
 
             if (empty($gis[$record->giid])) {
                 $gis[$record->giid] = new grade_item(array('id' => $record->giid));
             }
 
-            $grade = is_null($record->finalgrade) || 0 == $record->finalgrade ?
-                        get_string('nograde', 'block_censusreport') :
-                        grade_format_gradevalue($record->finalgrade, &$gis[$record->giid]);
-
-
+            if (is_null($record->finalgrade)) {
+                $grade = get_string('nograde', 'block_censusreport');
+            } elseif (0 == $record->finalgrade) {
+                $grade = '0';
+            } else {
+                $grade = grade_format_gradevalue($record->finalgrade, &$gis[$record->giid]);
+            }
 
             $result = new stdClass;
             $result->userid      = $record->userid;
@@ -675,36 +675,103 @@ function bcr_build_grades_array($courseid, $useridorids = 0, $startdate = 0, $en
 }
 
 /**
- * Check grade_grades_history table for a non null grade record created within
- * the same date range
+ * This function finds the first grades_history submission made by the user
+ * within the start and end dates.
  *
- * For example: There are scenarios where the a grade_grades_history record has
- * a NULL value for the finalgrade.  When this happens we need to perform an
- * additional check for non-null grade_grades_history records that have occured
- * within the same date range as the initial search
+ * @param int - user id
+ * @param int - start date timestamp
+ * @param int - end date timestamp
  *
+ * @return object - properties grade item id, user id, grade item name, final
+ * grade and time created OR and empty object if no records were found
  */
-function bcr_check_for_non_null_grade($courseid, $userid, $startdate, $enddate, $groupid) {
+function bcr_check_grades_histories_initial_submission($userid, $startdate, $enddate) {
     global $CFG;
 
-    $sql = "SELECT u.id as userid, u.firstname, u.lastname, u.idnumber, gi.id as giid,
-                   gi.itemname, ggh.finalgrade, ggh.timemodified as timecreated
+    $result = new stdClass();
+    $first_run = true;
+
+    // Search grades_history for the user's first submission
+    $sql = "SELECT ggh.id, gi.id as giid, ggh.userid, gi.itemname,
+                   ggh.finalgrade, ggh.timemodified AS timecreated
             FROM {$CFG->prefix}grade_items gi
             INNER JOIN {$CFG->prefix}grade_grades_history ggh ON ggh.itemid = gi.id
-            INNER JOIN {$CFG->prefix}user u ON u.id = ggh.userid ".
-            ($groupid != 0 ? "INNER JOIN {$CFG->prefix}groups_members gm ON gm.userid = u.id " : '') . "
-            WHERE gi.courseid = {$courseid}
+            WHERE ggh.userid = {$userid}
             AND gi.itemtype = 'mod'
-            AND u.id = {$userid}
-            AND ggh.timemodified > {$startdate}
-            AND ggh.timemodified <= {$enddate}
-            AND ggh.finalgrade > 0
-            AND NOT ISNULL(ggh.finalgrade) " . // We only want non null values
-            ($groupid != 0 ? "AND gm.groupid = {$groupid} " : '') . "
-            GROUP BY userid
-            ORDER BY ggh.timemodified ASC, u.lastname ASC, u.firstname ASC";
+            AND ggh.timemodified >= {$startdate}
+            AND ggh.timemodified < {$enddate}
+            GROUP BY gi.id
+            ORDER BY ggh.timemodified ASC";
 
-    return get_record_sql($sql);
+    // The code will loop through each submission made by the user
+    // If a non-grade item is found then the loop is broken and the record returned
+    // Else the first submission record is returned
+    if ($rs = get_recordset_sql($sql)) {
+        while ($record = rs_fetch_next_record($rs)) {
+
+            if ($first_run) {
+                // Save the first submission found
+                $result->giid           = $record->giid;
+                $result->userid         = $record->userid;
+                $result->itemname       = $record->itemname;
+                $result->finalgrade     = $record->finalgrade;
+                $result->timecreated    = $record->timecreated;
+            }
+
+            // If the grade is NULL/0 search grades_histories again for a non NULL/0 grade matching the grade item id
+            if (is_null($record->finalgrade) || 0 == $record->finalgrade) {
+
+                // Check for the first non NULL/0 submission for that grade item id
+                $non_zero_record = bcr_check_for_non_null_grade($userid, $startdate, $enddate, $record->giid);
+
+                if (!empty($non_zero_record)) {
+
+                    $result->giid           = $record->giid;
+                    $result->userid         = $record->userid;
+                    $result->itemname       = $record->itemname;
+                    $result->finalgrade     = $non_zero_record->finalgrade;
+                    $result->timecreated    = $record->timecreated;
+
+                    break;
+                }
+            }
+
+            $first_run = false;
+        }
+    }
+
+    return $result;
+
+}
+
+/**
+ * This function searches the grades_history table for the first non NULL/0
+ * record for a given user and grade item id
+ *
+ * @param int - user id
+ * @param int - start date timestamp
+ * @param int - end date timestamp
+ * @param int - grade item id
+ *
+ * @param mixed - get_record_sql object or false if no records were found
+ */
+function bcr_check_for_non_null_grade($userid, $startdate, $enddate, $gradeitemid) {
+    global $CFG;
+
+    $sql = "SELECT ggh.id, gi.id as giid, ggh.userid, gi.itemname,
+                   ggh.finalgrade, ggh.timemodified AS timecreated
+            FROM {$CFG->prefix}grade_items gi
+            INNER JOIN {$CFG->prefix}grade_grades_history ggh ON ggh.itemid = gi.id
+            WHERE ggh.userid = {$userid}
+            AND gi.itemtype = 'mod'
+            AND ggh.itemid = {$gradeitemid}
+            AND ggh.timemodified >= {$startdate}
+            AND ggh.timemodified < {$enddate}
+            AND ggh.finalgrade > 0
+            AND NOT ISNULL(ggh.finalgrade)
+            ORDER BY ggh.timemodified ASC";
+
+    return get_record_sql($sql, true);
 }
 
 
