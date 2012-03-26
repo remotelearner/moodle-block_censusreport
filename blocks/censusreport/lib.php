@@ -555,7 +555,6 @@ function bcr_build_grades_array($courseid, $useridorids = 0, $startdate = 0, $en
             $result->timecreated = $record->timecreated;
             $result->date        = strftime('%m/%d/%y', $record->timecreated);
             $results[$record->userid] = $result;
-
         }
 
         rs_close($rs);
@@ -609,7 +608,7 @@ function bcr_build_grades_array($courseid, $useridorids = 0, $startdate = 0, $en
                 $results[$record->userid]->activity = $record->itemname;
                 $results[$record->userid]->grade = grade_format_gradevalue($record->finalgrade, &$gis[$record->giid]);
                 $results[$record->userid]->timecreated = $time;
-
+                $results[$record->userid]->date  = strftime('%m/%d/%y', $time);
             }
         }
         rs_close($rs);
@@ -710,12 +709,14 @@ function bcr_check_grades_histories_initial_submission($userid, $startdate, $end
         while ($record = rs_fetch_next_record($rs)) {
 
             if ($first_run) {
+
                 // Save the first submission found
                 $result->giid           = $record->giid;
                 $result->userid         = $record->userid;
                 $result->itemname       = $record->itemname;
                 $result->finalgrade     = $record->finalgrade;
                 $result->timecreated    = $record->timecreated;
+
             }
 
             // If the grade is NULL/0 search grades_histories again for a non NULL/0 grade matching the grade item id
@@ -725,13 +726,11 @@ function bcr_check_grades_histories_initial_submission($userid, $startdate, $end
                 $non_zero_record = bcr_check_for_non_null_grade($userid, $startdate, $enddate, $record->giid);
 
                 if (!empty($non_zero_record)) {
-
                     $result->giid           = $record->giid;
                     $result->userid         = $record->userid;
                     $result->itemname       = $record->itemname;
                     $result->finalgrade     = $non_zero_record->finalgrade;
                     $result->timecreated    = $record->timecreated;
-
                     break;
                 }
             }
