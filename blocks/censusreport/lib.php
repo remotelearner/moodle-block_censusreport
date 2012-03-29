@@ -573,8 +573,7 @@ function bcr_build_grades_array($courseid, $useridorids = 0, $startdate = 0, $en
             AND gi.itemtype = 'mod'
             AND ra.roleid = {$role->id}
             AND ra.contextid = {$context->id}
-            AND ( ( gg.timecreated >= {$startdate} AND gg.timecreated <= {$enddate} )
-            OR  ( gg.timemodified >= {$startdate} AND gg.timemodified <= {$enddate} ) )" .
+            AND gg.timemodified >= {$startdate} AND gg.timemodified < {$enddate} " .
             ($groupid != 0 ? "AND gm.groupid = {$groupid} " : '') . "
             GROUP BY gg.userid
             ORDER BY MIN(gg.timecreated) ASC, u.lastname ASC, u.firstname ASC";
@@ -586,7 +585,7 @@ function bcr_build_grades_array($courseid, $useridorids = 0, $startdate = 0, $en
             }
 
             // Some graded items only use the timemodified field and a null value for the timecreated field
-            $time = empty($record->timecreated) ? $record->timemodified : $record->timecreated;
+            $time = $record->timemodified;
 
             if (empty($results[$record->userid])) {
 
@@ -599,7 +598,7 @@ function bcr_build_grades_array($courseid, $useridorids = 0, $startdate = 0, $en
                 $result->activity    = $record->itemname;
                 $result->grade       = grade_format_gradevalue($record->finalgrade, &$gis[$record->giid]);
                 $result->timecreated = $time;
-                $result->date        = strftime('%m/%d/%y', $record->timecreated);
+                $result->date        = strftime('%m/%d/%y', $record->timemodified);
                 $results[$record->userid] = $result;
             } else if ($time < $results[$record->userid]->timecreated &&
                        !is_null($record->finalgrade) &&
@@ -688,8 +687,10 @@ function bcr_build_grades_array($courseid, $useridorids = 0, $startdate = 0, $en
 function bcr_check_grades_histories_initial_submission($userid, $startdate, $enddate, $courseid) {
     global $CFG;
 
-    $result = new stdClass();
-    $first_run = true;
+    $result                 = new stdClass();
+    $first_result           = new stdClass(); // Data struct to contain the first submission found
+    $first_run              = true;
+    $use_first_submission   = true; // Flag to denote the use of the first submission found
 
     // Search grades_history for the user's first submission
     $sql = "SELECT ggh.id, gi.id as giid, ggh.userid, gi.itemname,
@@ -712,33 +713,66 @@ function bcr_check_grades_histories_initial_submission($userid, $startdate, $end
 
             if ($first_run) {
 
-                // Save the first submission found
+                // Save the first submission within the date range for two reasons:
+                // 1. In case there is a second submission, within the date range
+                // that does have a grade.  If this is the case then we only want to
+                // save the grade value, but retain the date of the initial submission
+                // 2. There are no additional submissions with a non zero/null grade within
+                // the date range
+                $first_result->giid           = $record->giid;
+                $first_result->userid         = $record->userid;
+                $first_result->itemname       = $record->itemname;
+                $first_result->finalgrade     = $record->finalgrade;
+                $first_result->timecreated    = $record->timecreated;
+
+                $first_run = false;
+            }
+
+            // If the grade is zero/null search grades_histories again for a
+            // non zero/null grade matching the grade item id
+            if (is_null($record->finalgrade) || 0 == $record->finalgrade) {
+
+                // Save the zero/null grade submission, most important is the
+                // date (timecreated) of the grade submission
                 $result->giid           = $record->giid;
                 $result->userid         = $record->userid;
                 $result->itemname       = $record->itemname;
                 $result->finalgrade     = $record->finalgrade;
                 $result->timecreated    = $record->timecreated;
 
-            }
-
-            // If the grade is NULL/0 search grades_histories again for a non NULL/0 grade matching the grade item id
-            if (is_null($record->finalgrade) || 0 == $record->finalgrade) {
-
-                // Check for the first non NULL/0 submission for that grade item id
+                // Check for the first non zero/null submission for that grade item id
                 $non_zero_record = bcr_check_for_non_null_grade($userid, $startdate, $enddate, $record->giid);
 
                 if (!empty($non_zero_record)) {
-                    $result->giid           = $record->giid;
-                    $result->userid         = $record->userid;
-                    $result->itemname       = $record->itemname;
+
+                    // a non zero/null grade submission was found. Only save the grade value
+                    // and break out of the loop
                     $result->finalgrade     = $non_zero_record->finalgrade;
-                    $result->timecreated    = $record->timecreated;
+                    $use_first_submission = false;
                     break;
                 }
-            }
+            } else {
 
-            $first_run = false;
+                // A submission with a grade has been found, break out of the loop
+                $result->giid           = $record->giid;
+                $result->userid         = $record->userid;
+                $result->itemname       = $record->itemname;
+                $result->finalgrade     = $record->finalgrade;
+                $result->timecreated    = $record->timecreated;
+                $use_first_submission = false;
+                break;
+            }
         }
+    }
+
+    // If $use_first_submission is true, then non additional submission were found with a
+    // non zero/null grade value
+    if ($use_first_submission) {
+        $result->giid           = $first_result->giid;
+        $result->userid         = $first_result->userid;
+        $result->itemname       = $first_result->itemname;
+        $result->finalgrade     = $first_result->finalgrade;
+        $result->timecreated    = $first_result->timecreated;
     }
 
     return $result;
