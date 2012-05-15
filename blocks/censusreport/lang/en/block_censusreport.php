@@ -14,7 +14,6 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 $string['activity'] = 'Completed Activity';
-$string['blockname'] = 'Census Report';
 $string['certified'] = 'I hereby certify that this report is accurate to the best of my knowledge';
 $string['coursecode'] = 'Course Code';
 $string['courseid'] = 'Course Id';
@@ -39,6 +38,7 @@ $string['overriden'] = 'The settings for this block have been disabled';
 $string['overrideinstances'] = 'Override Local Settings';
 $string['overrideinstancesdesc'] = 'Override the local settings for all instances of this block';
 $string['pdf'] = 'PDF';
+$string['pluginname'] = 'Census Report';
 $string['querytitle'] = 'Choose download report';
 $string['reportlink'] = 'Get reports';
 $string['section'] = 'Section';

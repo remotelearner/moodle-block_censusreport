@@ -34,8 +34,7 @@ class block_censusreport extends block_base {
      * Init function
      */
     function init() {
-        $this->title   = get_string('blockname','block_censusreport');
-        $this->version = 2011021000;
+        $this->title   = get_string('pluginname','block_censusreport');
     }
 
 
