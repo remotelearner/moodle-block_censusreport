@@ -433,15 +433,16 @@ function bcr_build_grades_array($courseid, $useridorids = 0, $startdate = 0, $en
             INNER JOIN {$CFG->prefix}grade_grades_history ggh ON (ggh.itemid = gi.id AND ggh.userid = ra.userid)
             INNER JOIN {$CFG->prefix}user u ON u.id = ra.userid " .
             ($groupid != 0 ? "INNER JOIN {$CFG->prefix}groups_members gm ON gm.userid = u.id " : '') . "
-            WHERE gi.courseid = {$courseid}
+            WHERE gi.courseid = ?
             AND gi.itemtype = 'mod'
-            AND ra.roleid = {$role->id}
-            AND ra.contextid = {$context->id}
-            AND ggh.timemodified >= {$startdate}
-            AND ggh.timemodified <= {$enddate} " .
+            AND ra.roleid = ?
+            AND ra.contextid = ?
+            AND ggh.timemodified >= ?
+            AND ggh.timemodified <= ? " .
             ($groupid != 0 ? "AND gm.groupid = {$groupid} " : '') . "
             ORDER BY ggh.timemodified ASC, u.lastname ASC, u.firstname ASC";
-    $rs = $DB->get_recordset_sql($sql);
+    $dbparams = array($courseid,$role->id,$context->id,$startdate,$enddate);
+    $rs = $DB->get_recordset_sql($sql,$dbparams);
     foreach ($rs as $user) {
         // Find the first submission by that user
         $record = bcr_check_grades_histories_initial_submission($user->userid, $startdate, $enddate, $courseid);
@@ -489,16 +490,16 @@ function bcr_build_grades_array($courseid, $useridorids = 0, $startdate = 0, $en
             INNER JOIN {$CFG->prefix}grade_grades gg ON (gg.itemid = gi.id AND gg.userid = ra.userid)
             INNER JOIN {$CFG->prefix}user u ON u.id = ra.userid " .
             ($groupid != 0 ? "INNER JOIN {$CFG->prefix}groups_members gm ON gm.userid = u.id " : '') . "
-            WHERE gi.courseid = {$courseid}
+            WHERE gi.courseid = ?
             AND gi.itemtype = 'mod'
-            AND ra.roleid = {$role->id}
-            AND ra.contextid = {$context->id}
-            AND gg.timemodified >= {$startdate} AND gg.timemodified < {$enddate} " .
+            AND ra.roleid = ?
+            AND ra.contextid = ?
+            AND gg.timemodified >= ? AND gg.timemodified < ? " .
             ($groupid != 0 ? "AND gm.groupid = {$groupid} " : '') . "
             GROUP BY gg.userid
             ORDER BY MIN(gg.timecreated) ASC, u.lastname ASC, u.firstname ASC";
-
-    $rs = $DB->get_recordset_sql($sql);
+    $dbparams = array($courseid,$role->id,$context->id,$startdate,$enddate);
+    $rs = $DB->get_recordset_sql($sql,$dbparams);
     foreach ($rs as $record) {
 
         if (empty($gis[$record->giid])) {
@@ -544,19 +545,18 @@ function bcr_build_grades_array($courseid, $useridorids = 0, $startdate = 0, $en
             INNER JOIN {$CFG->prefix}role_assignments ra ON ra.userid = fp.userid
             INNER JOIN {$CFG->prefix}user u ON u.id = fp.userid " .
             ($groupid != 0 ? "INNER JOIN {$CFG->prefix}groups_members gm ON gm.userid = u.id " : '') . "
-            WHERE fd.course = $courseid
+            WHERE fd.course = ?
             AND f.assessed > 0
             AND fp.userid != 0
             AND gi.itemmodule = 'forum'
-            AND ra.contextid = {$context->id}
-            AND fp.created >= {$startdate}
-            AND fp.created <= {$enddate} " .
+            AND ra.contextid = ?
+            AND fp.created >= ?
+            AND fp.created <= ? " .
             ($groupid != 0 ? "AND gm.groupid = {$groupid} " : '') . "
             GROUP BY fp.userid
             ORDER BY fp.created ASC, u.lastname ASC, u.firstname ASC";
-
-
-    $rs = $DB->get_recordset_sql($sql);
+    $dbparams = array($courseid,$context->id,$startdate,$enddate);
+    $rs = $DB->get_recordset_sql($sql,$dbparams);
     foreach ($rs as $record) {
         if (empty($gis[$record->giid])) {
             $gis[$record->giid] = new grade_item(array('id' => $record->giid));
@@ -614,18 +614,19 @@ function bcr_check_grades_histories_initial_submission($userid, $startdate, $end
                    ggh.finalgrade, ggh.timemodified AS timecreated
             FROM {$CFG->prefix}grade_items gi
             INNER JOIN {$CFG->prefix}grade_grades_history ggh ON ggh.itemid = gi.id
-            WHERE ggh.userid = {$userid}
-            AND gi.courseid = {$courseid}
+            WHERE ggh.userid = ?
+            AND gi.courseid = ?
             AND gi.itemtype = 'mod'
-            AND ggh.timemodified >= {$startdate}
-            AND ggh.timemodified < {$enddate}
+            AND ggh.timemodified >= ?
+            AND ggh.timemodified < ?
             GROUP BY gi.id
             ORDER BY ggh.timemodified ASC";
-
+    $dbparams = array($userid,$courseid,$startdate,$enddate);
+    $rs = $DB->get_recordset_sql($sql,$dbparams);
     // The code will loop through each submission made by the user
     // If a non-grade item is found then the loop is broken and the record returned
     // Else the first submission record is returned
-    $rs = $DB->get_recordset_sql($sql);
+
     foreach ($rs as $record) {
 
         if ($first_run) {
