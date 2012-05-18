@@ -18,6 +18,7 @@
  *
  * @package   blocks-censusreport
  * @author    Justin Filip <jfilip@remote-learner.net>
+ * @author    James McQuillan <james.mcquillan@remote-learner.net>
  * @copyright 2009 Remote Learner - http://www.remote-learner.net/
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
@@ -29,70 +30,80 @@ require_once('lib.php');
 require_login();
 
 $cid        = optional_param('id', SITEID, PARAM_INT);        // Course ID
-$action     = optional_param('action', 'setup', PARAM_ALPHA); // Action
+$action     = optional_param('action', 'setup', PARAM_INT); // Action
 $course     = optional_param('course', 0, PARAM_INT);         // Selected course id
 $instanceid = optional_param('instanceid', 0, PARAM_INT);     // Instance id
 
-$contextlevel = CONTEXT_COURSE;
-$capability   = 'block/censusreport:accesscoursereport';
 if ($cid == SITEID) {
-    $contextlevel = CONTEXT_SYSTEM;
+    $context = context_system::instance(0);
     $capability   = 'block/censusreport:accessallreports';
-}
-
-$context = get_context_instance($contextlevel, $cid);
-require_capability($capability, $context);
-
-$act_getreport         = eregi_replace('[^a-zA-Z]', '', get_string('getreport','block_censusreport'));
-$act_downloadreportpdf = eregi_replace('[^a-zA-Z]', '', get_string('downloadreportpdf','block_censusreport'));
-$act_downloadreportcsv = eregi_replace('[^a-zA-Z]', '', get_string('downloadreportcsv','block_censusreport'));
-$act_exit              = eregi_replace('[^a-zA-Z]', '', get_string('exit','block_censusreport'));
-
-if ($formdata = data_submitted()) {
-//        print_object($formdata);
-}
-
-if ($cid == SITEID) {
-    $repfunction = 'bcr_setup_site_query';
 } else {
-    $repfunction = 'bcr_setup_course_query';
+    $context = context_course::instance($cid);
+    $capability   = 'block/censusreport:accesscoursereport';
 }
 
-$message = '';
+require_capability($capability, $context);
+$PAGE->set_context($context);
+$PAGE->set_url('/blocks/censusreport/report.php');
 
-switch ($action) {
-    case $act_exit:
-        redirect($CFG->wwwroot.'/course/view.php?id='.$cid);
-        break;
+$mform = new bcr_setup_query_form($PAGE->url, $instanceid, $cid);
 
-    case $act_getreport:
-    case $act_downloadreportpdf:
-    case $act_downloadreportcsv:
-        $formdata->startdate = mktime(0,0,0,$formdata->sincemonth,$formdata->sinceday,$formdata->sinceyear);
-        $formdata->enddate   = mktime(0,0,0,$formdata->tomonth,$formdata->today,$formdata->toyear) + DAYSECS;
+if ($mform->is_cancelled()){
+    redirect($CFG->wwwroot.'/course/view.php?id='.$cid);
+    die();
+}
+
+$PAGE->set_heading($SITE->fullname);
+$PAGE->set_pagelayout('course');
+$PAGE->set_title(get_string('setupquery', 'block_censusreport'));
+$PAGE->navbar->add(get_string('reportlink', 'block_censusreport'));
+
+
+if ($formdata = $mform->get_data()) {
+
+    $instance = null;
+    if ($instanceid > 0) {
+        $instance      = $DB->get_record('block_instances', array('id'=>$instanceid));
+    }
+    $blockinstance = block_instance('censusreport', $instance);
+    if ($action == CENSUS_ACTION_DLPDF) {
+        $type = 'pdf';
+    } else if ($action == CENSUS_ACTION_DLCSV) {
+        $type = 'csv';
+    } else {
         $type = 'view';
-        $instance = null;
+    }
 
-        if ($instanceid > 0) {
-            $instance      = get_record('block_instance', 'id', $instanceid);
+    if (!empty($formdata->enddate)) {
+        $formdata->enddate+=DAYSECS;
+    }
+
+    if ($type === 'view') {
+        echo $OUTPUT->header();
+        $OUTPUT->box_start();
+    }
+
+    if (bcr_generate_report($blockinstance, $formdata, $type) === false) {
+        if ($type !== 'view') {
+            echo $OUTPUT->header();
+            $OUTPUT->box_start();
+            $mform->display();
         }
-        $blockinstance = block_instance('censusreport', $instance);
+        notify(get_string('nodatafound','block_censusreport'), 'notifysuccess');
+    }
 
-        if ($action == $act_downloadreportpdf) {
-            $type = 'pdf';
-        } else if ($action == $act_downloadreportcsv) {
-            $type = 'csv';
-        }
+    if ($type === 'view') {
+        $OUTPUT->box_end();
+        $OUTPUT->footer();
+    }
 
-        if (bcr_generate_report($blockinstance, $formdata, $type) === false) {
-            $repfunction($cid, $instanceid, $formdata, 'No data found');
-        }
+} else {
+    echo $OUTPUT->header();
+    $OUTPUT->box_start();
 
-        break;
+    $mform->display();
 
-    case 'setup':
-    default:
-        $repfunction($cid, $instanceid, $formdata, $message);
+    $OUTPUT->box_end();
+    $OUTPUT->footer();
 }
 
-?>

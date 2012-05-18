@@ -18,179 +18,90 @@
  *
  * @package   blocks-censusreport
  * @author    Justin Filip <jfilip@remote-learner.net>
+ * @author    James McQuillan <james.mcquillan@remote-learner.net>
  * @copyright 2009 Remote Learner - http://www.remote-learner.net/
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+require_once($CFG->libdir . '/formslib.php');
 
-function bcr_lowercase(&$item, $key) {
-    $item = strtolower($item);
-}
+define('CENSUS_ACTION_VIEW',1);
+define('CENSUS_ACTION_DLPDF',2);
+define('CENSUS_ACTION_DLCSV',3);
 
-/**
- * Displays the query setup screen.
- *
- * @param int $cid         The course ID.
- * @param int $iid         The instance ID.
- * @param object $formdata The form data
- * @param string $message  A message
- * @return none
- * @uses $CFG
- */
-function bcr_setup_site_query($cid, $iid, $formdata = false, $message='') {
-    global $CFG;
+class bcr_setup_query_form extends moodleform {
 
-    $PAGE = page_create_object(PAGE_COURSE_VIEW, SITEID);
-    $PAGE->print_header(get_string('setupquery', 'block_censusreport'),
-                        array(get_string('reportlink', 'block_censusreport') => ''));
+    protected $iid;
 
-    // Display form:
-    $courses = get_courses("all", "c.sortorder ASC", "c.id,c.shortname");
-    if (empty($courses)) {
-        error(get_string('nocourses', 'block_censusreport'), $CFG->wwwroot);
+    function __construct($actionurl, $iid, $cid) {
+        $this->iid = $iid;
+        $this->cid = $cid;
+        parent::moodleform($actionurl);
     }
-    $coursemenu = array();
-    foreach ($courses as $course) {
-        if ($course->id == SITEID) {
-            continue;
+
+    function definition() {
+        global $DB, $CFG;
+        $mform =& $this->_form;
+
+        $mform->addElement('header', 'header', get_string('querytitle', 'block_censusreport'));
+        $mform->addElement('hidden','instanceid',$this->iid);
+        $mform->addElement('hidden','id',$this->cid);
+
+        if ($this->cid == SITEID) {
+
+            $courses = get_courses("all", "c.sortorder ASC", "c.id,c.shortname");
+            if (empty($courses)) {
+                error(get_string('nocourses', 'block_censusreport'), $CFG->wwwroot);
+            }
+            $coursemenu = array();
+            foreach ($courses as $course) {
+                if ($course->id == SITEID) {
+                    continue;
+                }
+                $coursemenu[$course->id] = $course->shortname;
+            }
+
+            $mform->addElement('select','course',get_string('course', 'block_censusreport'),$coursemenu);
+
+        } else {
+
+            $course = $DB->get_record('course', array('id'=>$this->cid));
+            if (empty($course)) {
+                error ('This course doesn\'t exist!');
+            }
+
+            $mform->addElement('hidden','course',$this->cid);
+            $mform->addElement('static','course_label', get_string('course', 'block_censusreport'), $course->fullname);
+
+            if (($grouprecs = groups_get_all_groups($course->id, 0, 0, 'g.id,g.name'))) {
+                $groups = array();
+                foreach ($grouprecs as $grouprec) {
+                    $groups[$grouprec->id] = $grouprec->name;
+                }
+                $groups = array('0' => 'All groups') + $groups;
+                $mform->addElement('select','group',get_string('groupselector', 'block_censusreport'),$groups);
+            }
         }
-        $coursemenu[$course->id] = $course->shortname;
+
+        $mform->addElement('date_selector', 'startdate', get_string('from'));
+        $mform->addElement('date_selector', 'enddate', get_string('to'));
+
+        $mform->addElement('html','<br />');
+        $actions = array();
+        $actions[] =& $mform->createElement('radio', 'action', '', get_string('getreport','block_censusreport'),CENSUS_ACTION_VIEW);
+        $actions[] =& $mform->createElement('radio', 'action', '', get_string('downloadreportpdf','block_censusreport'),CENSUS_ACTION_DLPDF);
+        $actions[] =& $mform->createElement('radio', 'action', '', get_string('downloadreportcsv','block_censusreport'),CENSUS_ACTION_DLCSV);
+        $mform->addGroup($actions, 'action', get_string('action','block_censusreport'), array(' '), false);
+        $mform->setDefault('action',CENSUS_ACTION_VIEW);
+
+        $mform->addElement('html','<br />');
+        $submits=array();
+        $submits[] = &$mform->createElement('submit', 'submitbutton', get_string('getreport','block_censusreport'));
+        $submits[] = &$mform->createElement('reset', 'resetbutton', get_string('revert'));
+        $submits[] = &$mform->createElement('cancel');
+        $mform->addGroup($submits, 'submits', '&nbsp;', array(' '), false);
     }
-
-    print_simple_box_start('center', '80%');
-
-    echo '<form action="report.php" method="post">'."\n";
-
-    echo '<fieldset>'."\n";
-    echo '<input type="hidden" name="instanceid" value="'. $iid .'" />' ."\n";
-    echo '<legend>'.get_string('querytitle', 'block_censusreport').'</legend>'."\n";
-
-    echo '<table cellpadding="4" cellspacing="0" border="0">';
-    echo '<tbody>';
-
-    echo '<tr>';
-    echo '<td>';
-    choose_from_menu($coursemenu, 'course', (!empty($formdata->course)?$formdata->course:''), '');
-    echo '</td>';
-
-    echo '<td>from: ';
-    print_date_selector('sinceday', 'sincemonth', 'sinceyear', (isset($formdata->startdate)?$formdata->startdate:0));
-    echo ' to: ';
-    print_date_selector('today', 'tomonth', 'toyear', (isset($formdata->enddate)?$formdata->enddate:0));
-    echo '</td>';
-    echo '</tr>';
-
-    echo '<tr>';
-    echo '<td colspan="2" align="center">';
-    echo '<input type="hidden" name="id" value="'.SITEID.'" /> ';
-    echo '<input type="hidden" name="group" value="0" /> ';
-    echo '<input type="submit" name="action" value="'.get_string('getreport','block_censusreport').'" /> ';
-    echo '<input type="submit" name="action" value="'.get_string('downloadreportpdf','block_censusreport').'" /> ';
-    echo '<input type="submit" name="action" value="'.get_string('downloadreportcsv','block_censusreport').'" /> ';
-    echo '<input type="submit" name="action" value="'.get_string('exit','block_censusreport').'" /></td>';
-    echo '</td>';
-    echo '</tr>';
-
-    echo '</tbody></table>';
-
-    if (!empty($message)) {
-        notify($message, 'notifysuccess');
-    }
-
-    echo '</fieldset>'."\n";
-    echo '</form>'."\n";
-
-    print_simple_box_end();
-
-    print_footer();
 }
-
-
-/**
- * Displays the query setup screen.
- *
- * @param int $cid         The course id.
- * @param int $iid         The instance id.
- * @param object $formdata The form data
- * @param string $message  A message
- * @return none
- */
-function bcr_setup_course_query($cid, $iid, $formdata=false, $message='') {
-    $course = get_record('course', 'id', $cid);
-
-    if (!$course) {
-        error ('This course doesn\'t exist!');
-    }
-
-    $PAGE = page_create_object(PAGE_COURSE_VIEW, $cid);
-    $PAGE->print_header(get_string('setupquery', 'block_censusreport'),
-                        array(get_string('reportlink', 'block_censusreport') => ''));
-
-    print_simple_box_start('center', '80%');
-
-    echo '<form action="report.php" method="post">'."\n";
-
-    echo '<fieldset>'."\n";
-    echo '<legend>'.get_string('querytitle', 'block_censusreport').'</legend>'."\n";
-
-    echo '<table cellpadding="4" cellspacing="0" border="0">';
-    echo '<tbody>';
-
-    echo '<tr>';
-    echo '<td>';
-    echo '<input type="hidden" name="course" value="'.$cid.'" /> ';
-    echo '<input type="hidden" name="instanceid" value="'.$iid.'" /> ';
-    p($course->fullname);
-    echo '</td>';
-
-    echo '<td>from: ';
-    print_date_selector('sinceday', 'sincemonth', 'sinceyear', (isset($formdata->startdate)?$formdata->startdate:0));
-    echo ' to: ';
-    print_date_selector('today', 'tomonth', 'toyear', (isset($formdata->enddate)?$formdata->enddate:0));
-    echo '</td>';
-    echo '</tr>';
-
-    if (($grouprecs = groups_get_all_groups($course->id, 0, 0, 'g.id,g.name'))) {
-        $groups = array();
-        foreach ($grouprecs as $grouprec) {
-            $groups[$grouprec->id] = $grouprec->name;
-        }
-        echo '<tr>';
-        echo '<td>';
-        echo get_string('groupselector', 'block_censusreport').': ';
-        echo '</td>';
-
-        echo '<td>';
-        $groups = array('0' => 'All groups') + $groups;
-        choose_from_menu ($groups, 'group', 0);
-        echo '</td>';
-        echo '</tr>';
-    }
-
-    echo '<tr>';
-    echo '<td colspan="2" align="center">';
-    echo '<input type="hidden" name="id" value="'.$cid.'" /> ';
-    echo '<input type="submit" name="action" value="'.get_string('getreport','block_censusreport').'" /> ';
-    echo '<input type="submit" name="action" value="'.get_string('downloadreportpdf','block_censusreport').'" /> ';
-    echo '<input type="submit" name="action" value="'.get_string('downloadreportcsv','block_censusreport').'" /> ';
-    echo '<input type="submit" name="action" value="'.get_string('exit','block_censusreport').'" /></td>';
-    echo '</td>';
-    echo '</tr>';
-
-    echo '</tbody></table>';
-
-    if (!empty($message)) {
-        notify($message, 'notifysuccess');
-    }
-
-    echo '</fieldset>'."\n";
-    echo '</form>'."\n";
-
-    print_simple_box_end();
-
-    print_footer();
-}
-
 
 /**
  * Performs the report function.
@@ -205,11 +116,11 @@ function bcr_setup_course_query($cid, $iid, $formdata=false, $message='') {
  * @uses $CFG
  */
 function bcr_generate_report($block, $formdata, $type='view') {
-    global $CFG;
+    global $CFG, $DB;
 
     $blockname     = 'block_censusreport';
     $group         = isset($formdata->group)  ? $formdata->group : 0;
-    $course  = get_record('course', 'id', $formdata->course);
+    $course        = $DB->get_record('course', array('id'=>$formdata->course));
     $groupusers    = array();
 
     if (!empty($group)) {
@@ -218,7 +129,7 @@ function bcr_generate_report($block, $formdata, $type='view') {
 
     } else {
         // Get all userss within the course
-        $context = get_context_instance(CONTEXT_COURSE, $course->id);
+        $context = context_course::instance($course->id);
         $groupusers   = get_users_by_capability($context, 'moodle/legacy:student',
                        'u.id', 'u.lastname ASC, u.firstname ASC', '', '', '', '', false, true);
     }
@@ -229,7 +140,7 @@ function bcr_generate_report($block, $formdata, $type='view') {
 
     $results = bcr_build_grades_array($formdata->course, $groupusers, $formdata->startdate, $formdata->enddate, $group);
 
-    if (!$results) {
+    if (empty($results)) {
         return false;
     }
 
@@ -246,7 +157,7 @@ function bcr_generate_report($block, $formdata, $type='view') {
     $numcols  = count($headers);
 
     if (!$numusers || !$course) {
-        echo 'Nothing to report';
+        //get_string('nothingtoreport','block_censusreport');
         return false;
     }
 
@@ -272,49 +183,49 @@ function bcr_generate_report($block, $formdata, $type='view') {
         'excel' => get_string('excel', $blockname)
     );
 
-    $context = get_context_instance(CONTEXT_COURSE, $course->id);
+    $context = context_course::instance($course->id);
 
-    if ($managerroles = get_config('', 'coursemanager')) {
-        $coursemanagerroles = split(',', $managerroles);
-
-        if ($roles = get_records_select( 'role', '', 'sortorder' )) {
-            foreach ($roles as $role) {
-                if (in_array( $role->id, $coursemanagerroles )) {
-                    if ($users = get_role_users($role->id, $context, true, '', 'u.lastname ASC, u.firstname ASC', true)) {
-                        $namesarray = array();
-
-                        foreach ($users as $teacher) {
-                            $fullname = fullname($teacher, has_capability('moodle/site:viewfullnames', $context));
-
-                            if (!in_array($fullname, $namesarray)) {
-                                $namesarray[] = $fullname;
-                            }
-                        }
-                    }
+    $instructors = ' - ';
+    if (!empty($CFG->coursecontact)) {
+        $coursecontactroles = explode(',', $CFG->coursecontact);
+        foreach ($coursecontactroles as $roleid) {
+            $role = $DB->get_record('role', array('id'=>$roleid));
+            $roleid = (int) $roleid;
+            if ($users = get_role_users($roleid, $context, true)) {
+                foreach ($users as $teacher) {
+                    $fullname = fullname($teacher, has_capability('moodle/site:viewfullnames', $context));
+                    $namesarray[] = format_string(role_get_name($role, $context)).': <a href="'.$CFG->wwwroot.'/user/view.php?id='.
+                                    $teacher->id.'&amp;course='.SITEID.'">'.$fullname.'</a>';
                 }
             }
         }
 
         if (!empty($namesarray)) {
             $instructors = implode(', ', $namesarray);
-        } else {
-            $instructors = ' - ';
         }
     }
 
-    $table = new stdClass;
+    $table = new html_table();
     $table->head = $headers;
     $table->align = $align;
     $table->data = array();
     $tenp_report->headers = $headers;
     $tenp_report->data = array();
 
-    // Get student legacy role
-    $legacyroles = get_legacy_roles();
-    $studentcapability = $legacyroles['student'];
-
     foreach ($results as $result) {
-        if (has_capability($studentcapability, $context, $result->userid, false)) {
+
+        $add_user_to_report = false;
+        $roles = get_user_roles($context,$result->userid,false);
+
+        if (is_array($roles)) {
+            foreach ($roles as $role) {
+                if (!empty($role->shortname) && $role->shortname === 'student') {
+                    $add_user_to_report = true;
+                }
+            }
+        }
+
+        if ($add_user_to_report === true) {
             if ($showstudentid) {
                 $datum = array($result->student, $result->studentid, $result->activity, $result->grade, $result->date);
             } else {
@@ -332,10 +243,6 @@ function bcr_generate_report($block, $formdata, $type='view') {
     }
 
     if ($type == 'view') {
-        $PAGE = page_create_object(PAGE_COURSE_VIEW, $formdata->id);
-        $PAGE->print_header(get_string('setupquery', $blockname),
-                            array(get_string('reportlink', $blockname) => ''));
-
 
         if ($block->check_field_status('showcoursename', 'view')) {
             echo '<b>'. get_string('coursetitle', $blockname) .':</b> '. $course->fullname .'<br />';
@@ -356,13 +263,11 @@ function bcr_generate_report($block, $formdata, $type='view') {
             echo '<b>' . get_string('instructor', $blockname) . ':</b> ' . $instructors . '<br /><br />';
         }
 
-        print_table($table);
+        echo html_writer::table($table);
 
         echo '<br /><br /><div align="center">'
            . '<a href="'.$CFG->wwwroot.'/blocks/censusreport/report.php?id='.$formdata->id
            . ((isset($block->instance) && !empty($block->instance)) ? '&instanceid='. $block->instance->id : '') .'">Back to reports</a></div>';
-
-        print_footer();
 
     } else if ($type == 'pdf') {
         $tenp_report->filename = 'censusreport';
@@ -491,16 +396,35 @@ function bcr_generate_report($block, $formdata, $type='view') {
  * @return array An array of user course log information.
  */
 function bcr_build_grades_array($courseid, $useridorids = 0, $startdate = 0, $enddate = 0, $groupid = 0) {
-    global $CFG;
+    global $CFG, $DB;
 
     require_once($CFG->dirroot.'/lib/gradelib.php');
     require_once($CFG->dirroot.'/lib/grade/constants.php');
     require_once($CFG->dirroot.'/lib/grade/grade_item.php');
 
-    $role           = get_default_course_role($courseid);
-    $context        = get_context_instance(CONTEXT_COURSE, $courseid);
+    $context        = context_course::instance($courseid);
     $results        = array();
     $gis            = array();
+
+    //get default role
+    $enrol_plugins = enrol_get_instances($courseid, true);
+    if (is_array($enrol_plugins)) {
+        foreach ($enrol_plugins as $enrol_plugin) {
+            $enrol_plugin = enrol_get_plugin($enrol_plugin->enrol);
+            $roleid = $enrol_plugin->get_config('roleid');
+            $role = $DB->get_record('role',array('id'=>$roleid));
+            if (!empty($role)) {
+                break;
+            }
+        }
+    }
+    //if we couldn't determine the default role using the enrol plugins, try to get a default role - in this case 'student'
+    if (empty($role)) {
+        $role = $DB->get_record('role',array('shortname'=>'student'));
+        if (empty($role)) {
+            error('Could not get default role!');
+        }
+    }
 
     // Pass #1 - Search through grade_grades_history data for user submissions with the date range
     $sql = "SELECT DISTINCT(u.id) AS userid, u.lastname, u.firstname, u.idnumber
@@ -517,48 +441,44 @@ function bcr_build_grades_array($courseid, $useridorids = 0, $startdate = 0, $en
             AND ggh.timemodified <= {$enddate} " .
             ($groupid != 0 ? "AND gm.groupid = {$groupid} " : '') . "
             ORDER BY ggh.timemodified ASC, u.lastname ASC, u.firstname ASC";
+    $rs = $DB->get_recordset_sql($sql);
+    foreach ($rs as $user) {
+        // Find the first submission by that user
+        $record = bcr_check_grades_histories_initial_submission($user->userid, $startdate, $enddate, $courseid);
 
-    if ($rs = get_recordset_sql($sql)) {
-        while ($user = rs_fetch_next_record($rs)) {
-
-            // Find the first submission by that user
-            $record = bcr_check_grades_histories_initial_submission($user->userid, $startdate, $enddate, $courseid);
-
-            if (!isset($record->giid)) {
-                continue; // This shouldn't happen
-            }
-
-            $record->lastname  = $user->lastname;
-            $record->firstname = $user->firstname;
-            $record->idnumber  = $user->idnumber;
-
-            if (empty($gis[$record->giid])) {
-                $gis[$record->giid] = new grade_item(array('id' => $record->giid));
-            }
-
-            if (is_null($record->finalgrade)) {
-                $grade = get_string('nograde', 'block_censusreport');
-            } elseif (0 == $record->finalgrade) {
-                $grade = '0';
-            } else {
-                $grade = grade_format_gradevalue($record->finalgrade, &$gis[$record->giid]);
-            }
-
-            $result = new stdClass;
-            $result->userid      = $record->userid;
-            $result->lastname    = $record->lastname;
-            $result->firstname   = $record->firstname;
-            $result->student     = fullname($record);
-            $result->studentid   = $record->idnumber;
-            $result->activity    = $record->itemname;
-            $result->grade       = $grade;
-            $result->timecreated = $record->timecreated;
-            $result->date        = strftime('%m/%d/%y', $record->timecreated);
-            $results[$record->userid] = $result;
+        if (!isset($record->giid)) {
+            continue; // This shouldn't happen
         }
 
-        rs_close($rs);
+        $record->lastname  = $user->lastname;
+        $record->firstname = $user->firstname;
+        $record->idnumber  = $user->idnumber;
+
+        if (empty($gis[$record->giid])) {
+            $gis[$record->giid] = new grade_item(array('id' => $record->giid));
+        }
+
+        if (is_null($record->finalgrade)) {
+            $grade = get_string('nograde', 'block_censusreport');
+        } elseif (0 == $record->finalgrade) {
+            $grade = '0';
+        } else {
+            $grade = grade_format_gradevalue($record->finalgrade, &$gis[$record->giid]);
+        }
+
+        $result = new stdClass;
+        $result->userid      = $record->userid;
+        $result->lastname    = $record->lastname;
+        $result->firstname   = $record->firstname;
+        $result->student     = fullname($record);
+        $result->studentid   = $record->idnumber;
+        $result->activity    = $record->itemname;
+        $result->grade       = $grade;
+        $result->timecreated = $record->timecreated;
+        $result->date        = strftime('%m/%d/%y', $record->timecreated);
+        $results[$record->userid] = $result;
     }
+    $rs->close();
 
 
     // Pass #2 - Get general grade item records from the DB and compare dates with grade_grades_history entries
@@ -578,40 +498,40 @@ function bcr_build_grades_array($courseid, $useridorids = 0, $startdate = 0, $en
             GROUP BY gg.userid
             ORDER BY MIN(gg.timecreated) ASC, u.lastname ASC, u.firstname ASC";
 
-    if ($rs = get_recordset_sql($sql)) {
-        while ($record = rs_fetch_next_record($rs)) {
-            if (empty($gis[$record->giid])) {
-                $gis[$record->giid] = new grade_item(array('id' => $record->giid));
-            }
+    $rs = $DB->get_recordset_sql($sql);
+    foreach ($rs as $record) {
 
-            // Some graded items only use the timemodified field and a null value for the timecreated field
-            $time = $record->timemodified;
-
-            if (empty($results[$record->userid])) {
-
-                $result = new stdClass;
-                $result->userid      = $record->userid;
-                $result->lastname    = $record->lastname;
-                $result->firstname   = $record->firstname;
-                $result->student     = fullname($record);
-                $result->studentid   = $record->idnumber;
-                $result->activity    = $record->itemname;
-                $result->grade       = grade_format_gradevalue($record->finalgrade, &$gis[$record->giid]);
-                $result->timecreated = $time;
-                $result->date        = strftime('%m/%d/%y', $record->timemodified);
-                $results[$record->userid] = $result;
-            } else if ($time < $results[$record->userid]->timecreated &&
-                       !is_null($record->finalgrade) &&
-                       0 < $record->finalgrade) {
-
-                $results[$record->userid]->activity = $record->itemname;
-                $results[$record->userid]->grade = grade_format_gradevalue($record->finalgrade, &$gis[$record->giid]);
-                $results[$record->userid]->timecreated = $time;
-                $results[$record->userid]->date  = strftime('%m/%d/%y', $time);
-            }
+        if (empty($gis[$record->giid])) {
+            $gis[$record->giid] = new grade_item(array('id' => $record->giid));
         }
-        rs_close($rs);
+
+        // Some graded items only use the timemodified field and a null value for the timecreated field
+        $time = $record->timemodified;
+
+        if (empty($results[$record->userid])) {
+
+            $result = new stdClass;
+            $result->userid      = $record->userid;
+            $result->lastname    = $record->lastname;
+            $result->firstname   = $record->firstname;
+            $result->student     = fullname($record);
+            $result->studentid   = $record->idnumber;
+            $result->activity    = $record->itemname;
+            $result->grade       = grade_format_gradevalue($record->finalgrade, &$gis[$record->giid]);
+            $result->timecreated = $time;
+            $result->date        = strftime('%m/%d/%y', $record->timemodified);
+            $results[$record->userid] = $result;
+        } else if ($time < $results[$record->userid]->timecreated &&
+                   !is_null($record->finalgrade) &&
+                   0 < $record->finalgrade) {
+
+            $results[$record->userid]->activity = $record->itemname;
+            $results[$record->userid]->grade = grade_format_gradevalue($record->finalgrade, &$gis[$record->giid]);
+            $results[$record->userid]->timecreated = $time;
+            $results[$record->userid]->date  = strftime('%m/%d/%y', $time);
+        }
     }
+    $rs->close();
 
     // Pass #3 - Get any graded forum post records from the DB
     $sql = "SELECT u.id as userid, fp.id as postid, gi.id AS giid, u.firstname, u.lastname, u.idnumber,
@@ -636,35 +556,32 @@ function bcr_build_grades_array($courseid, $useridorids = 0, $startdate = 0, $en
             ORDER BY fp.created ASC, u.lastname ASC, u.firstname ASC";
 
 
-    if ($rs = get_recordset_sql($sql)) {
-        while ($record = rs_fetch_next_record($rs)) {
-
-            if (empty($gis[$record->giid])) {
-                $gis[$record->giid] = new grade_item(array('id' => $record->giid));
-            }
-
-            /// Only record the oldest record found.
-            if (empty($results[$record->userid]) || ($record->timecreated < $results[$record->userid]->timecreated)) {
-
-                $grade = empty($record->finalgrade) ? get_string('nograde', 'block_censusreport') :
-                    grade_format_gradevalue($record->finalgrade, &$gis[$record->giid]);
-
-                $result = new stdClass;
-                $result->userid      = $record->userid;
-                $result->lastname    = $record->lastname;
-                $result->firstname   = $record->firstname;
-                $result->student     = fullname($record);
-                $result->studentid   = $record->idnumber;
-                $result->activity    = $record->itemname;
-                $result->grade       = $grade;
-                $result->timecreated = $record->timecreated;
-                $result->date        = strftime('%m/%d/%y', $record->timecreated);
-                $results[$record->userid] = $result;
-            }
+    $rs = $DB->get_recordset_sql($sql);
+    foreach ($rs as $record) {
+        if (empty($gis[$record->giid])) {
+            $gis[$record->giid] = new grade_item(array('id' => $record->giid));
         }
 
-        rs_close($rs);
+        /// Only record the oldest record found.
+        if (empty($results[$record->userid]) || ($record->timecreated < $results[$record->userid]->timecreated)) {
+
+            $grade = empty($record->finalgrade) ? get_string('nograde', 'block_censusreport') :
+                grade_format_gradevalue($record->finalgrade, &$gis[$record->giid]);
+
+            $result = new stdClass;
+            $result->userid      = $record->userid;
+            $result->lastname    = $record->lastname;
+            $result->firstname   = $record->firstname;
+            $result->student     = fullname($record);
+            $result->studentid   = $record->idnumber;
+            $result->activity    = $record->itemname;
+            $result->grade       = $grade;
+            $result->timecreated = $record->timecreated;
+            $result->date        = strftime('%m/%d/%y', $record->timecreated);
+            $results[$record->userid] = $result;
+        }
     }
+    $rs->close();
 
     // Sort the resulting data by using a "lastname ASC, firstname ASC" sorting algorithm
     usort($results, 'bcr_results_sort');
@@ -685,7 +602,7 @@ function bcr_build_grades_array($courseid, $useridorids = 0, $startdate = 0, $en
  * grade and time created OR and empty object if no records were found
  */
 function bcr_check_grades_histories_initial_submission($userid, $startdate, $enddate, $courseid) {
-    global $CFG;
+    global $CFG, $DB;
 
     $result                 = new stdClass();
     $first_result           = new stdClass(); // Data struct to contain the first submission found
@@ -708,62 +625,63 @@ function bcr_check_grades_histories_initial_submission($userid, $startdate, $end
     // The code will loop through each submission made by the user
     // If a non-grade item is found then the loop is broken and the record returned
     // Else the first submission record is returned
-    if ($rs = get_recordset_sql($sql)) {
-        while ($record = rs_fetch_next_record($rs)) {
+    $rs = $DB->get_recordset_sql($sql);
+    foreach ($rs as $record) {
 
-            if ($first_run) {
+        if ($first_run) {
 
-                // Save the first submission within the date range for two reasons:
-                // 1. In case there is a second submission, within the date range
-                // that does have a grade.  If this is the case then we only want to
-                // save the grade value, but retain the date of the initial submission
-                // 2. There are no additional submissions with a non zero/null grade within
-                // the date range
-                $first_result->giid           = $record->giid;
-                $first_result->userid         = $record->userid;
-                $first_result->itemname       = $record->itemname;
-                $first_result->finalgrade     = $record->finalgrade;
-                $first_result->timecreated    = $record->timecreated;
+            // Save the first submission within the date range for two reasons:
+            // 1. In case there is a second submission, within the date range
+            // that does have a grade.  If this is the case then we only want to
+            // save the grade value, but retain the date of the initial submission
+            // 2. There are no additional submissions with a non zero/null grade within
+            // the date range
+            $first_result->giid           = $record->giid;
+            $first_result->userid         = $record->userid;
+            $first_result->itemname       = $record->itemname;
+            $first_result->finalgrade     = $record->finalgrade;
+            $first_result->timecreated    = $record->timecreated;
 
-                $first_run = false;
-            }
+            $first_run = false;
+        }
 
-            // If the grade is zero/null search grades_histories again for a
-            // non zero/null grade matching the grade item id
-            if (is_null($record->finalgrade) || 0 == $record->finalgrade) {
+        // If the grade is zero/null search grades_histories again for a
+        // non zero/null grade matching the grade item id
+        if (is_null($record->finalgrade) || 0 == $record->finalgrade) {
 
-                // Save the zero/null grade submission, most important is the
-                // date (timecreated) of the grade submission
-                $result->giid           = $record->giid;
-                $result->userid         = $record->userid;
-                $result->itemname       = $record->itemname;
-                $result->finalgrade     = $record->finalgrade;
-                $result->timecreated    = $record->timecreated;
+            // Save the zero/null grade submission, most important is the
+            // date (timecreated) of the grade submission
+            $result->giid           = $record->giid;
+            $result->userid         = $record->userid;
+            $result->itemname       = $record->itemname;
+            $result->finalgrade     = $record->finalgrade;
+            $result->timecreated    = $record->timecreated;
 
-                // Check for the first non zero/null submission for that grade item id
-                $non_zero_record = bcr_check_for_non_null_grade($userid, $startdate, $enddate, $record->giid);
+            // Check for the first non zero/null submission for that grade item id
+            $non_zero_record = bcr_check_for_non_null_grade($userid, $startdate, $enddate, $record->giid);
 
-                if (!empty($non_zero_record)) {
+            if (!empty($non_zero_record)) {
 
-                    // a non zero/null grade submission was found. Only save the grade value
-                    // and break out of the loop
-                    $result->finalgrade     = $non_zero_record->finalgrade;
-                    $use_first_submission = false;
-                    break;
-                }
-            } else {
-
-                // A submission with a grade has been found, break out of the loop
-                $result->giid           = $record->giid;
-                $result->userid         = $record->userid;
-                $result->itemname       = $record->itemname;
-                $result->finalgrade     = $record->finalgrade;
-                $result->timecreated    = $record->timecreated;
+                // a non zero/null grade submission was found. Only save the grade value
+                // and break out of the loop
+                $result->finalgrade     = $non_zero_record->finalgrade;
                 $use_first_submission = false;
                 break;
             }
+        } else {
+
+            // A submission with a grade has been found, break out of the loop
+            $result->giid           = $record->giid;
+            $result->userid         = $record->userid;
+            $result->itemname       = $record->itemname;
+            $result->finalgrade     = $record->finalgrade;
+            $result->timecreated    = $record->timecreated;
+            $use_first_submission = false;
+            break;
         }
     }
+    $rs->close();
+
 
     // If $use_first_submission is true, then non additional submission were found with a
     // non zero/null grade value
@@ -788,25 +706,25 @@ function bcr_check_grades_histories_initial_submission($userid, $startdate, $end
  * @param int - end date timestamp
  * @param int - grade item id
  *
- * @param mixed - get_record_sql object or false if no records were found
+ * @param mixed - $DB->get_record_sql object or false if no records were found
  */
 function bcr_check_for_non_null_grade($userid, $startdate, $enddate, $gradeitemid) {
-    global $CFG;
+    global $CFG, $DB;
 
     $sql = "SELECT ggh.id, gi.id as giid, ggh.userid, gi.itemname,
                    ggh.finalgrade, ggh.timemodified AS timecreated
             FROM {$CFG->prefix}grade_items gi
             INNER JOIN {$CFG->prefix}grade_grades_history ggh ON ggh.itemid = gi.id
-            WHERE ggh.userid = {$userid}
+            WHERE ggh.userid = ?
             AND gi.itemtype = 'mod'
-            AND ggh.itemid = {$gradeitemid}
-            AND ggh.timemodified >= {$startdate}
-            AND ggh.timemodified < {$enddate}
+            AND ggh.itemid = ?
+            AND ggh.timemodified >= ?
+            AND ggh.timemodified < ?
             AND ggh.finalgrade > 0
             AND NOT ISNULL(ggh.finalgrade)
             ORDER BY ggh.timemodified ASC";
-
-    return get_record_sql($sql, true);
+    $params = array($userid,$gradeitemid,$startdate,$enddate);
+    return $DB->get_record_sql($sql, $params, IGNORE_MULTIPLE);
 }
 
 
@@ -851,5 +769,3 @@ function bcr_results_sort($a, $b) {
         return $comp;
     }
 }
-
-?>

@@ -395,7 +395,7 @@ class report {
                 $filename .= '.pdf';
 
                 $newpdf = new CR_PDF('L', 'in', 'letter');
-                $newpdf->SetFont('Arial', '', 9);
+                $newpdf->SetFont('helvetica', '', 9);
 
                 /// Handle page titles:
                 if (!isset($this->titlealign)) {
@@ -469,11 +469,9 @@ class report {
                 }
 
                 $newpdf->widths = $widths;
-
                 $newpdf->AddPage();
-                $newpdf->SetFont('Arial', '', 9);
+                $newpdf->SetFont('helvetica', '', 9);
                 $newpdf->SetFillColor(225, 225, 225);
-
 
                 $row = 0;
 
@@ -522,97 +520,21 @@ class report {
 
     function pdf_output($pdf, $name = '', $dest = '') {
         ob_start();
-         //Output PDF to some destination
-        //Finish document if necessary
-        if($pdf->state<3)
-            $pdf->Close();
+        //Output PDF to some destination
         //Normalize parameters
-        if(is_bool($dest))
+        if(is_bool($dest)) {
             $dest=$dest ? 'D' : 'F';
+        }
         $dest=strtoupper($dest);
-        if($dest=='')
-        {
-            if($name=='')
-            {
+        if($dest=='') {
+            if($name=='') {
                 $name='doc.pdf';
                 $dest='I';
-            }
-            else
+            } else {
                 $dest='F';
+            }
         }
-        switch($dest)
-        {
-            case 'I':
-                //Send to standard output
-                if(ob_get_contents())
-                    $pdf->Error('Some data has already been output, can\'t send PDF file');
-
-               if(php_sapi_name()!='cli')
-                {
-                  if(headers_sent())
-                       $pdf->Error('Some data has already been output to browser, can\'t send PDF file');
-
-                    //We send to a browser diffrently using IE than FireFox due to Mime Types
-                    if(isset($_SERVER['HTTP_USER_AGENT']) && strpos($_SERVER['HTTP_USER_AGENT'],'MSIE')){
-                      //mtrace("MSIE <br />"); //Remote Learner Rev's begin by John T. Macklin (C) 2008
-                       header('Expires: 0');
-                       header('Cache-Control: private, pre-check=0, post-check=0, max-age=0, must-revalidate');
-                       header('Connection: Keep-Alive');
-                       header('Content-Language: en-us');
-                       header('Keep-Alive: timeout=5, max=100');
-                       header('Content-Type: application/pdf');
-                       header('Content-Length: '.strlen($pdf->buffer));
-                       header('Content-Disposition: inline; filename="'.$name.'"');
-                       header('Content-Transfer-Encoding: binary');
-                       header('Pragma: no-cache');
-                       header('Pragma: expires');
-                       header('Expires: Mon, 20 Aug 1969 09:23:00 GMT');
-                       header('Last-Modified: ' . gmdate('D, d M Y H:i:s') . ' GMT');
-                       echo $pdf->buffer;
-
-                    }else{  // Must not Be MSIE
-                       header('Content-Type: application/pdf');
-                       header('Content-Length: '.strlen($pdf->buffer));
-                       header('Content-Disposition: inline; filename="'.$name.'"');
-                       echo $pdf->buffer;
-                    }
-
-
-                }
-
-                break;
-            case 'D':
-                //Download file
-                if(ob_get_contents())
-                    $pdf->Error('Some data has already been output, can\'t send PDF file');
-
-                if(isset($_SERVER['HTTP_USER_AGENT']) && strpos($_SERVER['HTTP_USER_AGENT'],'MSIE'))
-                    header('Content-Type: application/force-download');
-                else
-                    header('Content-Type: application/octet-stream');
-
-                   if(headers_sent())
-                      $pdf->Error('Some data has already been output to browser, can\'t send PDF file');
-
-                      header('Content-Length: '.strlen($pdf->buffer));
-                      header('Content-disposition: attachment; filename="'.$name.'"');
-
-                echo $pdf->buffer;
-                break;
-            case 'F':
-                //Save to local file
-                $f=fopen($name,'wb');
-                if(!$f)
-                    $pdf->Error('Unable to create output file: '.$name);
-                fwrite($f,$pdf->buffer,strlen($pdf->buffer));
-                fclose($f);
-                break;
-            case 'S':
-                //Return as a string
-                return $pdf->buffer;
-            default:
-                $pdf->Error('Incorrect output destination: '.$dest);
-        }
+        $pdf->Output($name,$dest);
         return 0;
     }
 
@@ -779,5 +701,3 @@ class report {
     /// To be extended.
     }
 }
-
-?>

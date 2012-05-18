@@ -18,6 +18,7 @@
  *
  * @package   blocks-censusreport
  * @author    Justin Filip <jfilip@remote-learner.net>
+ * @author    James McQuillan <james.mcquillan@remote-learner.net>
  * @copyright 2011 Remote Learner - http://www.remote-learner.net/
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
@@ -51,39 +52,31 @@ class block_censusreport extends block_base {
             return $this->content;
         }
 
-        $this->content = new stdClass;
+        $ccontext = (!empty($this->instance->parentcontextid))
+                ? context::instance_by_id($this->instance->parentcontextid) : false;
 
-        if (!empty($this->instance->pageid)) {
-            $ccontext = get_context_instance(CONTEXT_COURSE, $this->instance->pageid);
-        } else {
-            $ccontext = false;
-        }
-        $scontext = get_context_instance(CONTEXT_SYSTEM);
+        $scontext = context_system::instance();
 
-        if ($ccontext != false) {
-            $coursereports = has_capability('block/censusreport:accesscoursereport', $ccontext);
-        } else {
-            $coursereports = false;
-        }
+        $coursereports = (!empty($ccontext))
+                ? has_capability('block/censusreport:accesscoursereport', $ccontext)
+                : false;
+
         $allreports = has_capability('block/censusreport:accessallreports', $scontext);
 
+        $this->content = new stdClass;
         $this->content->text = '';
-        if (empty($this->instance->pageid) || ($this->instance->pageid == SITEID)) {
-            if ($allreports) {
-                $this->content->text .= '<img src="'.$CFG->wwwroot.'/blocks/censusreport/pix/report.gif" /> ';
-                $this->content->text .= '<a href="'.$CFG->wwwroot.'/blocks/censusreport/report.php?id='
-                                      . SITEID .'&amp;instanceid='. $this->instance->id .'">'.
-                                        get_string('reportlink', 'block_censusreport').'</a>';
-            }
-        } else if ($coursereports) {
-            $this->content->text .= '<img src="'.$CFG->wwwroot.'/blocks/censusreport/pix/report.gif" align="middle" /> ';
+
+        $cid = (!empty($ccontext->instanceid)) ? $ccontext->instanceid : SITEID;
+        $access = ($cid === SITEID) ? $allreports : $coursereports;
+
+        if (!empty($access)) {
+            $this->content->text .= '<img src="'.$CFG->wwwroot.'/blocks/censusreport/pix/report.gif" /> ';
             $this->content->text .= '<a href="'.$CFG->wwwroot.'/blocks/censusreport/report.php?id='
-                                  . $this->instance->pageid.'&amp;instanceid='. $this->instance->id .'">'.
-                                    get_string('reportlink', 'block_censusreport').'</a>';
+                                      . $cid .'&amp;instanceid='. $this->instance->id .'">'.
+                                        get_string('reportlink', 'block_censusreport').'</a>';
         }
 
         $this->content->footer = '';
-
         return $this->content;
     }
 
@@ -113,16 +106,14 @@ class block_censusreport extends block_base {
      * @uses $CFG
      */
     function check_field_status($field, $type='') {
-        global $CFG;
-
         $blockname     = 'block_censusreport';
-        $blockoverride = $blockname .'_overrideinstances';
+        $blockoverride = 'overrideinstances';
         $status        = false;
 
-        if (isset($CFG->$blockoverride) && $CFG->$blockoverride) {
-            $configname = $blockname .'_'. $field;
-            if (isset($CFG->$configname) && ($type != '')) {
-                $values = explode(',', $CFG->$configname);
+        $gbl_config = get_config($blockname);
+        if (!empty($gbl_config->$blockoverride)) {
+            if (!empty($gbl_config->$field) && ($type != '')) {
+                $values = explode(',', $gbl_config->$field);
                 foreach ($values as $value) {
                     if ($value == $type) {
                         return true;
@@ -130,8 +121,8 @@ class block_censusreport extends block_base {
                 }
             }
         } else {
-            $configname = $field . $type;
-            if (isset($this->config->$configname) && $this->config->$configname) {
+            $configname = $field.'_'.$type;
+            if (!empty($this->config->$configname)) {
                 $status = true;
             }
         }
@@ -139,5 +130,3 @@ class block_censusreport extends block_base {
         return $status;
     }
 }
-
-?>

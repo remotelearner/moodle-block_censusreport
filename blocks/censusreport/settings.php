@@ -54,30 +54,28 @@ foreach ($fields as $field => $type) {
     } else if ($field == 'footermessage') {
         unset($labels['csv']);
     }
-    $name     = $blockname .'_'. $field;
+    $name     = $blockname .'/'. $field;
     switch ($type) {
         case CHECKBOX_ARRAY:
             $defaults = array();
-            $values   = array();
 
-            if (isset($CFG->$name)) {
-                $values = explode(',', $CFG->$name);
-
-            } else if (array_key_exists($field, $legacy)) {
+            if (isset($legacy[$field])) {
                 $values = $legacy[$field];
+                foreach ($values as $value) {
+                    $defaults[$value] = 1;
+                }
             }
 
-            foreach ($values as $value) {
-                $defaults[$value] = 1;
-            }
             $settings->add(new admin_setting_configmulticheckbox($name, get_string($field, $blockname),
                            get_string($field .'desc', $blockname), $defaults, $labels));
             break;
+
         case CHECKBOX:
             $default = isset($CFG->$name) ? $CFG->$name: 0;
             $settings->add(new admin_setting_configcheckbox($name, get_string($field, $blockname),
                            get_string($field .'desc', $blockname), $default, 1, 0));
             break;
+
         case TEXTBOX:
         default:
             $default = isset($CFG->$name) ? $CFG->$name : '';

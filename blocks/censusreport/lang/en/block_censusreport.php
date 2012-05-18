@@ -13,8 +13,10 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
+$string['action'] = 'Action';
 $string['activity'] = 'Completed Activity';
 $string['certified'] = 'I hereby certify that this report is accurate to the best of my knowledge';
+$string['course'] = 'Course';
 $string['coursecode'] = 'Course Code';
 $string['courseid'] = 'Course Id';
 $string['coursetitle'] = 'Course Title';
@@ -28,11 +30,13 @@ $string['footermessage'] = 'Enter PDF footer message';
 $string['footermessagedesc'] = 'This will be the default footer message for all PDF reports.';
 $string['footermessageoverride'] = 'Override PDF footer message';
 $string['footermessageoverridedesc'] = 'Override the PDF footer message for all instances of this block';
-$string['getreport'] = 'View report';
+$string['getreport'] = 'View Report';
 $string['grade'] = 'Grade';
 $string['groupselector'] = 'For group';
 $string['instructor'] = 'Instructor';
 $string['nocourses'] = 'There are no courses available to report on';
+$string['nodatafound'] = 'No Data Found';
+$string['nothingtoreport'] = 'Nothing to report';
 $string['online'] = 'View';
 $string['overriden'] = 'The settings for this block have been disabled';
 $string['overrideinstances'] = 'Override Local Settings';
@@ -67,4 +71,3 @@ $string['censusreport:accesscoursereport'] = 'Can access course census report';
 $string['censusreport_title'] = 'Census Report';
 $string['view'] = 'View';
 $string['nograde'] = 'No Grade';
-?>
