@@ -58,7 +58,7 @@ class block_censusreport_edit_form extends block_edit_form {
             $defaults = get_config($blockname,$name);
             $defaults = (!empty($defaults)) ? explode(',',$defaults) : array();
             foreach ($row as $field) {
-                $fieldname = $name.'_'.$field;
+                $fieldname = $name.$field;
                 $mform->addElement('html','<td>');
                 if (!empty($field)) {
                     $mform->addElement('advcheckbox','config_'.$fieldname,'');
