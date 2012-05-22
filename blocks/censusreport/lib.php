@@ -659,7 +659,7 @@ function bcr_check_grades_histories_initial_submission($userid, $startdate, $end
             $result->timecreated    = $record->timecreated;
 
             // Check for the first non zero/null submission for that grade item id
-            $non_zero_record = bcr_check_for_non_null_grade($userid, $startdate, $enddate, $record->giid);
+            $non_zero_record = bcr_check_for_non_null_grade($userid, $record->giid);
 
             if (!empty($non_zero_record)) {
 
@@ -709,7 +709,7 @@ function bcr_check_grades_histories_initial_submission($userid, $startdate, $end
  *
  * @param mixed - $DB->get_record_sql object or false if no records were found
  */
-function bcr_check_for_non_null_grade($userid, $startdate, $enddate, $gradeitemid) {
+function bcr_check_for_non_null_grade($userid, $gradeitemid, $startdate = null, $enddate = null) {
     global $CFG, $DB;
 
     $sql = "SELECT ggh.id, gi.id as giid, ggh.userid, gi.itemname,
@@ -719,12 +719,19 @@ function bcr_check_for_non_null_grade($userid, $startdate, $enddate, $gradeitemi
             WHERE ggh.userid = ?
             AND gi.itemtype = 'mod'
             AND ggh.itemid = ?
-            AND ggh.timemodified >= ?
-            AND ggh.timemodified < ?
             AND ggh.finalgrade > 0
-            AND NOT ISNULL(ggh.finalgrade)
-            ORDER BY ggh.timemodified ASC";
-    $params = array($userid,$gradeitemid,$startdate,$enddate);
+            AND NOT ISNULL(ggh.finalgrade)";
+    $params = array($userid,$gradeitemid);
+    if (!is_null($startdate)) {
+        $sql .= " AND ggh.timemodified >= ?";
+        $params[] = $startdate;
+    }
+    if (!is_null($enddate)) {
+        $sql .= " AND ggh.timemodified < ?";
+        $params[] = $enddate;
+    }
+    $sql .= " ORDER BY ggh.timemodified ASC";
+
     return $DB->get_record_sql($sql, $params, IGNORE_MULTIPLE);
 }
 
