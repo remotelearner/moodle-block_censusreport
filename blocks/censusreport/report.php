@@ -39,7 +39,7 @@ if ($cid == SITEID) {
     $capability   = 'block/censusreport:accessallreports';
 } else {
     if (! $course = $DB->get_record("course", array("id"=>$cid))) {
-        print_error('coursemisconf', 'assignment');
+        print_error('cannotfindcourse');
     }
     require_login($course);
     $context = context_course::instance($cid);
