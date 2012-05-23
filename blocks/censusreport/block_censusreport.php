@@ -121,7 +121,7 @@ class block_censusreport extends block_base {
                 }
             }
         } else {
-            $configname = $field.'_'.$type;
+            $configname = $field.$type;
             if (!empty($this->config->$configname)) {
                 $status = true;
             }

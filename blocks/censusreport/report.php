@@ -27,24 +27,32 @@ require_once('../../config.php');
 require_once('lib.php');
 
 /// Check for valid admin user
-require_login();
+
 
 $cid        = optional_param('id', SITEID, PARAM_INT);        // Course ID
 $action     = optional_param('action', 'setup', PARAM_INT); // Action
-$course     = optional_param('course', 0, PARAM_INT);         // Selected course id
 $instanceid = optional_param('instanceid', 0, PARAM_INT);     // Instance id
 
 if ($cid == SITEID) {
+    require_login();
     $context = context_system::instance(0);
     $capability   = 'block/censusreport:accessallreports';
 } else {
+    if (! $course = $DB->get_record("course", array("id"=>$cid))) {
+        print_error('coursemisconf', 'assignment');
+    }
+    require_login($course);
     $context = context_course::instance($cid);
     $capability   = 'block/censusreport:accesscoursereport';
 }
 
 require_capability($capability, $context);
-$PAGE->set_context($context);
 $PAGE->set_url('/blocks/censusreport/report.php');
+$PAGE->set_context($context);
+$PAGE->set_title(get_string('setupquery', 'block_censusreport'));
+$PAGE->set_heading($SITE->fullname);
+$PAGE->set_pagelayout('incourse');
+$PAGE->navbar->add(get_string('reportlink', 'block_censusreport'));
 
 $mform = new bcr_setup_query_form($PAGE->url, $instanceid, $cid);
 
@@ -52,12 +60,6 @@ if ($mform->is_cancelled()){
     redirect($CFG->wwwroot.'/course/view.php?id='.$cid);
     die();
 }
-
-$PAGE->set_heading($SITE->fullname);
-$PAGE->set_pagelayout('course');
-$PAGE->set_title(get_string('setupquery', 'block_censusreport'));
-$PAGE->navbar->add(get_string('reportlink', 'block_censusreport'));
-
 
 if ($formdata = $mform->get_data()) {
 
