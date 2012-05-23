@@ -80,30 +80,29 @@ if ($formdata = $mform->get_data()) {
 
     if ($type === 'view') {
         echo $OUTPUT->header();
-        $OUTPUT->box_start();
+        echo $OUTPUT->box_start();
     }
 
     if (bcr_generate_report($blockinstance, $formdata, $type) === false) {
         if ($type !== 'view') {
             echo $OUTPUT->header();
-            $OUTPUT->box_start();
+            echo $OUTPUT->box_start();
             $mform->display();
         }
         notify(get_string('nodatafound','block_censusreport'), 'notifysuccess');
     }
 
     if ($type === 'view') {
-        $OUTPUT->box_end();
-        $OUTPUT->footer();
+        echo $OUTPUT->box_end();
+        echo $OUTPUT->footer();
     }
 
 } else {
     echo $OUTPUT->header();
-    $OUTPUT->box_start();
+    echo $OUTPUT->box_start();
 
     $mform->display();
 
-    $OUTPUT->box_end();
-    $OUTPUT->footer();
+    echo $OUTPUT->box_end();
+    echo $OUTPUT->footer();
 }
-
