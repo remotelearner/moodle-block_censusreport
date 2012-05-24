@@ -138,7 +138,8 @@ function bcr_generate_report($block, $formdata, $type='view') {
         $groupusers = array_keys($groupusers);
     }
 
-    $results = bcr_build_grades_array($formdata->course, $groupusers, $formdata->startdate, $formdata->enddate, $group);
+    $showallstudents = $block->check_field_status('showallstudents');
+    $results = bcr_build_grades_array($formdata->course, $groupusers, $formdata->startdate, $formdata->enddate, $group, $showallstudents);
 
     if (empty($results)) {
         return false;
@@ -184,7 +185,8 @@ function bcr_generate_report($block, $formdata, $type='view') {
     );
 
     $context = context_course::instance($course->id);
-
+    $namesarray_view = array();
+    $namesarray_pdf = array();
     $instructors = ' - ';
     if (!empty($CFG->coursecontact)) {
         $coursecontactroles = explode(',', $CFG->coursecontact);
@@ -194,14 +196,11 @@ function bcr_generate_report($block, $formdata, $type='view') {
             if ($users = get_role_users($roleid, $context, true)) {
                 foreach ($users as $teacher) {
                     $fullname = fullname($teacher, has_capability('moodle/site:viewfullnames', $context));
-                    $namesarray[] = format_string(role_get_name($role, $context)).': <a href="'.$CFG->wwwroot.'/user/view.php?id='.
+                    $namesarray_view[] = format_string(role_get_name($role, $context)).': <a href="'.$CFG->wwwroot.'/user/view.php?id='.
                                     $teacher->id.'&amp;course='.SITEID.'">'.$fullname.'</a>';
+                    $namesarray_pdf[] = format_string(role_get_name($role, $context)).': '.$fullname;
                 }
             }
-        }
-
-        if (!empty($namesarray)) {
-            $instructors = implode(', ', $namesarray);
         }
     }
 
@@ -260,6 +259,7 @@ function bcr_generate_report($block, $formdata, $type='view') {
         }
 
         if ($block->check_field_status('showteachername', 'view')) {
+            $instructors = (!empty($namesarray_view)) ? implode(', ', $namesarray_view) : $instructors;
             echo '<b>' . get_string('instructor', $blockname) . ':</b> ' . $instructors . '<br /><br />';
         }
 
@@ -291,6 +291,7 @@ function bcr_generate_report($block, $formdata, $type='view') {
         }
 
         if ($block->check_field_status('showteachername', 'pdf')) {
+            $instructors = (!empty($namesarray_pdf)) ? implode(', ', $namesarray_pdf) : $instructors;
             $tenp_report->top .= get_string('instructor', $blockname) . ': ' . $instructors;
         }
 
@@ -349,6 +350,7 @@ function bcr_generate_report($block, $formdata, $type='view') {
             $fields[1][] = $course->idnumber;
         }
         if ($block->check_field_status('showteachername', 'csv')) {
+            $instructors = (!empty($namesarray_pdf)) ? implode(', ', $namesarray_pdf) : $instructors;
             $fields[0][] = get_string('instructor', $blockname);
             $fields[1][] = str_replace(',', ';', $instructors);
         }
@@ -395,7 +397,7 @@ function bcr_generate_report($block, $formdata, $type='view') {
  * @param int   $groupid     Limit the results to a specific group ID (optional).
  * @return array An array of user course log information.
  */
-function bcr_build_grades_array($courseid, $useridorids = 0, $startdate = 0, $enddate = 0, $groupid = 0) {
+function bcr_build_grades_array($courseid, $useridorids = 0, $startdate = 0, $enddate = 0, $groupid = 0, $showallstudents = false) {
     global $CFG, $DB;
 
     require_once($CFG->dirroot.'/lib/gradelib.php');
@@ -628,6 +630,34 @@ function bcr_build_grades_array($courseid, $useridorids = 0, $startdate = 0, $en
         }
     }
     $rs->close();
+
+    //Add in users without activity if desired
+    if ($showallstudents === true) {
+        $sql = "SELECT u.id as userid, u.lastname, u.firstname, u.idnumber
+                FROM {$CFG->prefix}user u
+                INNER JOIN {$CFG->prefix}role_assignments ra ON ra.userid = u.id ".
+                ($groupid != 0 ? "INNER JOIN {$CFG->prefix}groups_members gm ON gm.userid = u.id " : '') . "
+                WHERE ra.contextid=?".
+                ($groupid != 0 ? "AND gm.groupid = {$groupid} " : '');
+        $dbparams = array($context->id);
+        $rs = $DB->get_recordset_sql($sql,$dbparams);
+        foreach ($rs as $record) {
+            if (empty($results[$record->userid])) {
+                $result = new stdClass;
+                $result->userid      = $record->userid;
+                $result->lastname    = $record->lastname;
+                $result->firstname   = $record->firstname;
+                $result->student     = fullname($record);
+                $result->studentid   = $record->idnumber;
+                $result->activity    = get_string('noactivitycompleted', 'block_censusreport');
+                $result->grade       = get_string('nograde', 'block_censusreport');
+                $result->timecreated = 0;
+                $result->date        = get_string('na', 'block_censusreport');
+                $results[$record->userid] = $result;
+            }
+        }
+    }
+
     // Sort the resulting data by using a "lastname ASC, firstname ASC" sorting algorithm
     usort($results, 'bcr_results_sort');
 

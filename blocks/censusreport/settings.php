@@ -36,6 +36,7 @@ $labels       = array('view' => get_string('view'),
 
 $fields = array(
     'overrideinstances'         => CHECKBOX,
+    'showallstudents'           => CHECKBOX,
     'showcoursename'            => CHECKBOX_ARRAY,
     'showcoursecode'            => CHECKBOX_ARRAY,
     'showcourseid'              => CHECKBOX_ARRAY,

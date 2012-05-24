@@ -73,6 +73,13 @@ class block_censusreport_edit_form extends block_edit_form {
         }
         $mform->addElement('html','</table>');
 
+        $mform->addElement('advcheckbox','config_showallstudents',get_string('showallstudents', $blockname));
+        if (!isset($this->block->config->showallstudents)) {
+            $default = get_config($blockname,'showallstudents');
+            $default = ($default == 1) ? (int)$default : 0;
+            $mform->setDefault('config_showallstudents', $default);
+        }
+
         $mform->addElement('textarea','config_footermessagepdf',get_string('footermessage', $blockname));
     }
 }
