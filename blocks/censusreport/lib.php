@@ -481,7 +481,6 @@ function bcr_build_grades_array($courseid, $useridorids = 0, $startdate = 0, $en
     }
     $rs->close();
 
-
     // Pass #2 - Get general grade item records from the DB and compare dates with grade_grades_history entries
     $sql = "SELECT gg.id, gi.id as giid, u.id as userid, u.firstname, u.lastname, u.idnumber, gi.itemname,
                    gg.finalgrade, gg.timecreated, gg.timemodified
@@ -536,7 +535,7 @@ function bcr_build_grades_array($courseid, $useridorids = 0, $startdate = 0, $en
 
     // Pass #3 - Get any graded forum post records from the DB
     $sql = "SELECT u.id as userid, fp.id as postid, gi.id AS giid, u.firstname, u.lastname, u.idnumber,
-                   gi.itemname, gg.finalgrade, fp.created as timecreated
+                   fp.message,gi.itemname, gg.finalgrade, fp.created as timecreated
             FROM {$CFG->prefix}forum_posts fp
             INNER JOIN {$CFG->prefix}forum_discussions fd ON fd.id = fp.discussion
             INNER JOIN {$CFG->prefix}forum f ON f.id = fd.forum
@@ -583,6 +582,52 @@ function bcr_build_grades_array($courseid, $useridorids = 0, $startdate = 0, $en
     }
     $rs->close();
 
+    // Pass #4 - Get any graded glossary entries from the DB
+    $sql = "SELECT u.id as userid, ent.id as entid, gi.id AS giid, u.firstname, u.lastname, u.idnumber,
+                   gi.itemname, gg.finalgrade, ent.timecreated as timecreated
+            FROM {$CFG->prefix}glossary_entries ent
+            INNER JOIN {$CFG->prefix}glossary glos ON ent.glossaryid = glos.id
+            INNER JOIN {$CFG->prefix}grade_items gi ON gi.iteminstance = glos.id
+            LEFT JOIN {$CFG->prefix}grade_grades gg ON (gg.itemid = gi.id AND gg.userid = ent.userid)
+            INNER JOIN {$CFG->prefix}role_assignments ra ON ra.userid = ent.userid
+            INNER JOIN {$CFG->prefix}user u ON u.id = ent.userid ".
+            ($groupid != 0 ? "INNER JOIN {$CFG->prefix}groups_members gm ON gm.userid = u.id " : '') . "
+            WHERE glos.course = ?
+            AND glos.assessed > 0
+            AND ent.userid != 0
+            AND gi.itemmodule = 'glossary'
+            AND ra.contextid = ?
+            AND ent.timecreated >= ?
+            AND ent.timecreated <= ? ".
+            ($groupid != 0 ? "AND gm.groupid = {$groupid} " : '')."
+            ";
+    $dbparams = array($courseid,$context->id,$startdate,$enddate);
+    $rs = $DB->get_recordset_sql($sql,$dbparams);
+    foreach ($rs as $record) {
+        if (empty($gis[$record->giid])) {
+            $gis[$record->giid] = new grade_item(array('id' => $record->giid));
+        }
+
+        /// Only record the oldest record found.
+        if (empty($results[$record->userid]) || ($record->timecreated < $results[$record->userid]->timecreated)) {
+
+            $grade = empty($record->finalgrade) ? get_string('nograde', 'block_censusreport') :
+                grade_format_gradevalue($record->finalgrade, &$gis[$record->giid]);
+
+            $result = new stdClass;
+            $result->userid      = $record->userid;
+            $result->lastname    = $record->lastname;
+            $result->firstname   = $record->firstname;
+            $result->student     = fullname($record);
+            $result->studentid   = $record->idnumber;
+            $result->activity    = $record->itemname;
+            $result->grade       = $grade;
+            $result->timecreated = $record->timecreated;
+            $result->date        = strftime('%m/%d/%y', $record->timecreated);
+            $results[$record->userid] = $result;
+        }
+    }
+    $rs->close();
     // Sort the resulting data by using a "lastname ASC, firstname ASC" sorting algorithm
     usort($results, 'bcr_results_sort');
 
