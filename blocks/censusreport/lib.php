@@ -88,7 +88,7 @@ class bcr_setup_query_form extends moodleform {
 
         $mform->addElement('html','<br />');
         $actions = array();
-        $actions[] =& $mform->createElement('radio', 'action', '', get_string('getreport','block_censusreport'),CENSUS_ACTION_VIEW);
+        $actions[] =& $mform->createElement('radio', 'action', '', get_string('viewreport','block_censusreport'),CENSUS_ACTION_VIEW);
         $actions[] =& $mform->createElement('radio', 'action', '', get_string('downloadreportpdf','block_censusreport'),CENSUS_ACTION_DLPDF);
         $actions[] =& $mform->createElement('radio', 'action', '', get_string('downloadreportcsv','block_censusreport'),CENSUS_ACTION_DLCSV);
         $mform->addGroup($actions, 'action', get_string('action','block_censusreport'), array(' '), false);
