@@ -75,5 +75,5 @@ $string['censusreport:accessallreports'] = 'Can access all course census reports
 $string['censusreport:accesscoursereport'] = 'Can access course census report';
 $string['censusreport_title'] = 'Census Report';
 $string['view'] = 'View';
-$string['viewreport'] = 'View Report';
+$string['viewreport'] = 'View';
 $string['nograde'] = 'No Grade';
