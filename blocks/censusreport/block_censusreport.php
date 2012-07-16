@@ -52,27 +52,21 @@ class block_censusreport extends block_base {
             return $this->content;
         }
 
-        $ccontext = (!empty($this->instance->parentcontextid))
-                ? context::instance_by_id($this->instance->parentcontextid) : false;
-
-        $scontext = context_system::instance();
-
-        $coursereports = (!empty($ccontext))
-                ? has_capability('block/censusreport:accesscoursereport', $ccontext)
-                : false;
-
-        $allreports = has_capability('block/censusreport:accessallreports', $scontext);
-
         $this->content = new stdClass;
         $this->content->text = '';
 
-        $cid = (!empty($ccontext->instanceid)) ? $ccontext->instanceid : SITEID;
-        $access = ($cid === SITEID) ? $allreports : $coursereports;
+        $access = false;
 
-        if (!empty($access)) {
+        if ($this->page->course->id == SITEID) {
+            $access = has_capability('block/censusreport:accessallreports', get_context_instance(CONTEXT_SYSTEM));
+        } else {
+            $access = has_capability('block/censusreport:accesscoursereport', $this->page->context);
+        }
+
+        if ($access) {
             $this->content->text .= '<img src="'.$CFG->wwwroot.'/blocks/censusreport/pix/report.gif" /> ';
             $this->content->text .= '<a href="'.$CFG->wwwroot.'/blocks/censusreport/report.php?id='
-                                      . $cid .'&amp;instanceid='. $this->instance->id .'">'.
+                                      . $this->page->course->id .'&amp;instanceid='. $this->instance->id .'">'.
                                         get_string('reportlink', 'block_censusreport').'</a>';
         }
 
