@@ -15,5 +15,5 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 $plugin->version = 2012051801;  // The current block version (Date: YYYYMMDDXX)
-$plugin->requires = 2010112400;  // Requires this Moodle version
-$plugin->release = "2.0.1";
+$plugin->requires = 2011070100;  // Requires this Moodle version
+$plugin->release = "2.1.1";
