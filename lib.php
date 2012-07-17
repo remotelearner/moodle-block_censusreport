@@ -129,7 +129,8 @@ function bcr_generate_report($block, $formdata, $type='view') {
 
     } else {
         // Get all userss within the course
-        $context = context_course::instance($course->id);
+        //$context = context_course::instance($course->id);
+        $context = get_context_instance(CONTEXT_COURSE, $course->id);
         $groupusers   = get_users_by_capability($context, 'moodle/legacy:student',
                        'u.id', 'u.lastname ASC, u.firstname ASC', '', '', '', '', false, true);
     }
@@ -184,7 +185,8 @@ function bcr_generate_report($block, $formdata, $type='view') {
         'excel' => get_string('excel', $blockname)
     );
 
-    $context = context_course::instance($course->id);
+    //$context = context_course::instance($course->id);
+    $context = get_context_instance(CONTEXT_COURSE, $course->id);
     $namesarray_view = array();
     $namesarray_pdf = array();
     $instructors = ' - ';
@@ -404,7 +406,8 @@ function bcr_build_grades_array($courseid, $useridorids = 0, $startdate = 0, $en
     require_once($CFG->dirroot.'/lib/grade/constants.php');
     require_once($CFG->dirroot.'/lib/grade/grade_item.php');
 
-    $context        = context_course::instance($courseid);
+    //$context        = context_course::instance($courseid);
+    $context = get_context_instance(CONTEXT_COURSE, $courseid);
     $results        = array();
     $gis            = array();
 
