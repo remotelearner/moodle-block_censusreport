@@ -35,14 +35,16 @@ $instanceid = optional_param('instanceid', 0, PARAM_INT);     // Instance id
 
 if ($cid == SITEID) {
     require_login();
-    $context = context_system::instance(0);
+    //$context = context_system::instance(0);
+    $context = get_context_instance(CONTEXT_SYSTEM);
     $capability   = 'block/censusreport:accessallreports';
 } else {
     if (! $course = $DB->get_record("course", array("id"=>$cid))) {
         print_error('cannotfindcourse');
     }
     require_login($course);
-    $context = context_course::instance($cid);
+    //$context = context_course::instance($cid);
+    $context = get_context_instance(CONTEXT_COURSE, $cid);
     $capability   = 'block/censusreport:accesscoursereport';
 }
 
