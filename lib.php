@@ -634,6 +634,52 @@ function bcr_build_grades_array($courseid, $useridorids = 0, $startdate = 0, $en
     }
     $rs->close();
 
+    // Pass #5 - Get any graded assignment entries from the DB (if they weren't in histories)
+    $sql = "SELECT u.id as userid, s.id as entid, gi.id AS giid, u.firstname, u.lastname, u.idnumber,
+                   gi.itemname, gg.finalgrade, s.timemodified as timecreated
+            FROM {$CFG->prefix}assignment_submissions s
+            INNER JOIN {$CFG->prefix}assignment a ON s.assignment = a.id
+            INNER JOIN {$CFG->prefix}grade_items gi ON gi.iteminstance = a.id
+            LEFT JOIN {$CFG->prefix}grade_grades gg ON (gg.itemid = gi.id AND gg.userid = s.userid)
+            INNER JOIN {$CFG->prefix}role_assignments ra ON ra.userid = s.userid
+            INNER JOIN {$CFG->prefix}user u ON u.id = s.userid ".
+            ($groupid != 0 ? "INNER JOIN {$CFG->prefix}groups_members gm ON gm.userid = u.id " : '') . "
+            WHERE a.course = ?
+            AND s.userid != 0
+            AND gi.itemmodule = 'assignment'
+            AND ra.contextid = ?
+            AND s.timemodified >= ?
+            AND s.timemodified <= ? ".
+            ($groupid != 0 ? "AND gm.groupid = {$groupid} " : '')."
+            ";
+    $dbparams = array($courseid,$context->id,$startdate,$enddate);
+    $rs = $DB->get_recordset_sql($sql,$dbparams);
+    foreach ($rs as $record) {
+        if (empty($gis[$record->giid])) {
+            $gis[$record->giid] = new grade_item(array('id' => $record->giid));
+        }
+
+        /// Only record the oldest record found.
+        if (empty($results[$record->userid]) || ($record->timecreated < $results[$record->userid]->timecreated)) {
+
+            $grade = empty($record->finalgrade) ? get_string('nograde', 'block_censusreport') :
+                grade_format_gradevalue($record->finalgrade, &$gis[$record->giid]);
+
+            $result = new stdClass;
+            $result->userid      = $record->userid;
+            $result->lastname    = $record->lastname;
+            $result->firstname   = $record->firstname;
+            $result->student     = fullname($record);
+            $result->studentid   = $record->idnumber;
+            $result->activity    = $record->itemname;
+            $result->grade       = $grade;
+            $result->timecreated = $record->timecreated;
+            $result->date        = strftime('%m/%d/%y', $record->timecreated);
+            $results[$record->userid] = $result;
+        }
+    }
+    $rs->close();
+
     //Add in users without activity if desired
     if ($showallstudents === true) {
         $sql = "SELECT u.id as userid, u.lastname, u.firstname, u.idnumber
