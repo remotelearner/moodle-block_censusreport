@@ -16,4 +16,4 @@
 
 $plugin->version = 2012051802;  // The current block version (Date: YYYYMMDDXX)
 $plugin->requires = 2011070100;  // Requires this Moodle version
-$plugin->release = "2.1.3";
+$plugin->release = "2.1.1.3";
