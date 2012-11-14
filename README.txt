@@ -1,7 +1,7 @@
 Block:   Census Report
 Date:    March 28th - 2011
 Version: 2012051802
-Release: 2.3.3
+Release: 2.3.3.1
 
 The new version of the census report includes a number of different display options, which will
 be explained below.  In general each display option can be set in two locations.  There are local
@@ -35,3 +35,6 @@ Release notes:
 
 Release 2.3.3:
 HOSSUP-6 - Add handling of assignment submissions separately from grade_history checking.
+
+Release 2.3.3.1:
+HOSSUP-614 - Removed concatenation from language string for AMOS compatibility
