@@ -51,8 +51,7 @@ $string['section'] = 'Section';
 $string['setting'] = 'Setting';
 $string['setupquery'] = 'Report query';
 $string['showallstudents'] = 'Show all Students (regardless of activity)';
-$string['showallstudentsdesc'] = 'Show all students for the selected course (and group), even if they have not had activity'
-    .' in the chosen period.';
+$string['showallstudentsdesc'] = 'Show all students for the selected course (and group), even if they have not had activity in the chosen period.';
 $string['showcoursecode'] = 'Display course code';
 $string['showcoursecodedesc'] = 'Whether the course code should be displayed by default';
 $string['showcourseid'] = 'Display course id';
