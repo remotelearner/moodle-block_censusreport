@@ -22,7 +22,7 @@
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-require_once($CFG->libdir . '/tcpdf/tcpdf.php');
+require_once($CFG->libdir.'/tcpdf/tcpdf.php');
 
 /**
  * Census report pdf class, extends the fast pdf class.
@@ -33,15 +33,15 @@ require_once($CFG->libdir . '/tcpdf/tcpdf.php');
  */
 class CR_PDF extends TCPDF {
 
-    public $title         = "";
+    public $title         = '';
     public $signatureline = false;
     public $dateline      = false;
     public $headers       = array();
     public $fontsize      = 16;
-    public $titlealign    = "C";
-    public $topalign      = "L";
-    public $top           = "";
-    public $bottom        = "";
+    public $titlealign    = 'C';
+    public $topalign      = 'L';
+    public $top           = '';
+    public $bottom        = '';
     public $widths        = array();
 
     /**
@@ -53,10 +53,10 @@ class CR_PDF extends TCPDF {
         global $CFG;
 
         $this->setY(1);
-        $this->SetFont('helvetica', '',    $this->fontsize);
-        $this->MultiCell(0, 0.2,       $this->title, 0, $this->titlealign);
-        $this->SetFont('helvetica', '',    $this->fontsize - 2);
-        $this->MultiCell(0, 0.2, "\n". $this->top, 0, $this->topalign);
+        $this->SetFont('helvetica', '', $this->fontsize);
+        $this->MultiCell(0, 0.2, $this->title, 0, $this->titlealign);
+        $this->SetFont('helvetica', '', $this->fontsize - 2);
+        $this->MultiCell(0, 0.2, "\n".$this->top, 0, $this->topalign);
         $this->Ln(0.2);
         $this->SetFont('helvetica', '', 9);
         $this->SetFillColor(225, 225, 225);
@@ -85,10 +85,8 @@ class CR_PDF extends TCPDF {
 
         if ($this->signatureline) {
             $this->SetFont('helvetica', '', $this->fontsize - 2);
-            $this->MultiCell(0, 0.2, get_string('certified', 'block_censusreport') .":\n",
-                               0, $this->topalign);
-            $this->MultiCell(0, 0.2, get_string('signature', 'block_censusreport') .':',
-                               0, $this->topalign);
+            $this->MultiCell(0, 0.2, get_string('certified', 'block_censusreport').":\n", 0, $this->topalign);
+            $this->MultiCell(0, 0.2, get_string('signature', 'block_censusreport').':', 0, $this->topalign);
             $x = $this->getX();
             $y = $this->getY();
             $this->line($x+1, $y-0.02, $x+3, $y-0.02);
@@ -96,14 +94,14 @@ class CR_PDF extends TCPDF {
 
         if ($this->dateline) {
             $this->SetFont('helvetica', '', $this->fontsize - 2);
-            $this->MultiCell(0, 0.2, get_string('date') .':', 0, $this->topalign);
+            $this->MultiCell(0, 0.2, get_string('date').':', 0, $this->topalign);
             $x = $this->getX();
             $y = $this->getY();
             $this->line($x+1, $y-0.02, $x+3, $y-0.02);
         }
 
-        if (file_exists($CFG->dirroot .'/blocks/censusreport/pix/moodlelogo.jpg')) {
-            $this->Image($CFG->dirroot .'/blocks/censusreport/pix/moodlelogo.jpg', 4.0, 8.0);
+        if (file_exists($CFG->dirroot.'/blocks/censusreport/pix/moodlelogo.jpg')) {
+            $this->Image($CFG->dirroot.'/blocks/censusreport/pix/moodlelogo.jpg', 4.0, 8.0);
         }
         $this->SetFont('helvetica', '', $this->fontsize - 2);
         $this->MultiCell(0, 0.2, $this->bottom, 0, $this->topalign);

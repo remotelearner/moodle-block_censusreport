@@ -206,11 +206,10 @@ class report {
                 } else {
                     $columndir  = $this->dir == "ASC" ? "DESC":"ASC";
                     $columnicon = $this->dir == "ASC" ? "down":"up";
-                    $columnicon = " <img src=\"$CFG->pixpath/t/$columnicon.gif\" alt=\"\" />";
+                    $columnicon = ' <img src="'.$CFG->pixpath.'/t/'.$columnicon.'.gif" alt="" />';
                 }
-                $$column = '<a href="' . $this->baseurl . '&amp;sort=' . $id . '&amp;dir=' .
-                           $columndir . '&amp;namesearch=' . urlencode(stripslashes($this->search)) .
-                           '&amp;alpha=' . $this->alpha . '">' . $header . '</a>' . $columnicon;
+                $$column = '<a href="'.$this->baseurl.'&amp;sort='.$id.'&amp;dir='.$columndir.'&amp;namesearch='.
+                           urlencode(stripslashes($this->search)).'&amp;alpha='.$this->alpha.'">'.$header.'</a>'.$columnicon;
             } else {
                 $$column = $header;
             }
@@ -266,9 +265,9 @@ class report {
         }
 
 
-        $title = !empty($this->title) ? $this->title : 'Census Report';
+        $title    = !empty($this->title) ? $this->title : get_string('censusreport', 'block_censusreport');
         $filename = !empty($this->filename) ? $this->filename : 'censusreport';
-        $top = !empty($this->top) ? $this->top : '';
+        $top      = !empty($this->top) ? $this->top : '';
 
         switch ($format) {
             case 'csv':
@@ -284,13 +283,13 @@ class report {
                     header('Pragma: no-cache');
                     header('Pragma: expires');
                     header('Expires: Mon, 20 Aug 1969 09:23:00 GMT');
-                    header('Last-Modified: ' . gmdate('D, d M Y H:i:s') . ' GMT');
+                    header('Last-Modified: '.gmdate('D, d M Y H:i:s').' GMT');
                     header('Content-Transfer-Encoding: ascii');
-                    header('Content-Disposition: attachment; filename=' . $filename);
+                    header('Content-Disposition: attachment; filename='.$filename);
                     header('Content-Type: text/comma-separated-values');
                 } else {
                     header('Content-Transfer-Encoding: ascii');
-                    header('Content-Disposition: attachment; filename=' . $filename);
+                    header('Content-Disposition: attachment; filename='.$filename);
                     header('Content-Type: text/comma-separated-values');
                 }
 
@@ -326,7 +325,7 @@ class report {
                 break;
 
             case 'excel':
-                require_once($CFG->libdir . '/excellib.class.php');
+                require_once($CFG->libdir.'/excellib.class.php');
 
                 $filename .= '.xls';
 
@@ -337,7 +336,7 @@ class report {
                 $workbook->send($filename);
 
             /// Creating the first worksheet
-                $sheettitle  = get_string('studentprogress', 'reportstudentprogress');
+                $sheettitle = get_string('studentprogress', 'reportstudentprogress');
                 $myxls      =& $workbook->add_worksheet($sheettitle);
 
             /// Format types
@@ -522,19 +521,21 @@ class report {
         ob_start();
         //Output PDF to some destination
         //Normalize parameters
-        if(is_bool($dest)) {
-            $dest=$dest ? 'D' : 'F';
+        if (is_bool($dest)) {
+            $dest = $dest ? 'D' : 'F';
         }
-        $dest=strtoupper($dest);
-        if($dest=='') {
-            if($name=='') {
-                $name='doc.pdf';
-                $dest='I';
+        $dest = strtoupper($dest);
+        if ($dest == '') {
+            if ($name == '') {
+                $name = 'doc.pdf';
+                $dest = 'I';
             } else {
-                $dest='F';
+                $dest = 'F';
             }
         }
-        $pdf->Output($name,$dest);
+
+        $pdf->Output($name, $dest);
+
         return 0;
     }
 
@@ -551,7 +552,7 @@ class report {
     function csv_escape_string($input) {
         $input = ereg_replace("[\r\n\t]", ' ', $input);
         $input = ereg_replace('"', '""', $input);
-        $input = '"' . $input . '"';
+        $input = '"'.$input.'"';
 
         return $input;
     }
@@ -567,7 +568,7 @@ class report {
         $output = '';
 
         if (!empty($this->fileformats)) {
-            $output .= '<form action="reportdownload.php" method="post">' . "\n";
+            $output .= '<form action="reportdownload.php" method="post">'."\n";
 
         /// Print out the necessary hidden form vars.
             $parts = explode('?', $this->baseurl);
@@ -583,16 +584,15 @@ class report {
                         $vals = explode('=', $arg);
 
                         if (!empty($vals[1])) {
-                            $output .= '<input type="hidden" name="' . $vals[0] .
-                                       '" value="' . urldecode($vals[1]) . '" />';
+                            $output .= '<input type="hidden" name="'.$vals[0].'" value="'.urldecode($vals[1]).'" />';
                         }
                     }
                 }
             }
 
             $output .= cm_choose_from_menu($this->fileformats, 'download', '', 'choose', '', '0', true);
-            $output .= '<input type="submit" value="Download report" />' . "\n";
-            $output .= '</form>' . "\n";
+            $output .= '<input type="submit" value="'.get_string('downloadreport', 'block_report').'" />'."\n";
+            $output .= '</form>'."\n";
         }
 
         return $output;
@@ -612,28 +612,27 @@ class report {
         $strall   = get_string('all');
 
     /// Bar of first initials
-        $output .= "<p style=\"text-align:center\">";
-        $output .= 'Name'." : ";
+        $output .= '<p style="text-align:center">';
+        $output .= get_string('name', 'block_censusreport')." : ";
         if ($this->alpha) {
-            $output .= " <a href=\"{$this->baseurl}&amp;sort=name&amp;dir=ASC&amp;perpage=" .
-                       "{$this->perpage}\">$strall</a> ";
+            $output .= ' <a href="'.$this->baseurl.'&amp;sort=name&amp;dir=ASC&amp;perpage='.$this->perpage.'">'.$strall.'</a> ';
         } else {
-            $output .= " <b>$strall</b> ";
+            $output .= ' <b>'.$strall.'</b> ';
         }
         foreach ($alphabet as $letter) {
             if ($letter == $this->alpha) {
-                $output .= " <b>$letter</b> ";
+                $output .= ' <b>'.$letter.'</b> ';
             } else {
-                $output .= " <a href=\"{$this->baseurl}&amp;sort=name&amp;dir=ASC&amp;perpage=" .
-                           "{$this->perpage}&amp;alpha=$letter\">$letter</a> ";
+                $output .= ' <a href="'.$this->baseurl.'&amp;sort=name&amp;dir=ASC&amp;perpage='.$this->perpage.'&amp;alpha='.
+                           $letter.'">'.$letter.'</a> ';
             }
         }
-        $output .= "</p>";
+        $output .= '</p>';
 
-        $output .= print_paging_bar($this->numrecs, $this->page, $this->perpage,
-                                    "{$this->baseurl}&amp;sort={$this->sort}&amp;dir={$this->dir}&amp;" .
-                                    "perpage={$this->perpage}&amp;alpha={$this->alpha}&amp;search=" .
-                                    urlencode(stripslashes($this->search)) . "&amp;", 'page', false, true);
+        $url = $this->baseurl.'&amp;sort='.$this->sort.'&amp;dir='.$this->dir.'&amp;perpage='.$this->perpage.'&amp;alpha='.
+               $this->alpha.'&amp;search='.urlencode(stripslashes($this->search)).'&amp;';
+
+        $output .= print_paging_bar($this->numrecs, $this->page, $this->perpage, $url, 'page', false, true);
 
         $output .= '<table class="searchbox" style="margin-left:auto;margin-right:auto" cellpadding="10"><tr><td>';
         $output .= '<form action="index.php" method="get"><fieldset class="invisiblefieldset">';
@@ -652,19 +651,18 @@ class report {
                     $vals = explode('=', $arg);
 
                     if (!empty($vals[1]) && $vals[1] != 'search') {
-                        $output .= '<input type="hidden" name="' . $vals[0] .
-                                   '" value="' . $vals[1] . '" />';
+                        $output .= '<input type="hidden" name="'.$vals[0].'" value="'.$vals[1].'" />';
                     }
                 }
             }
         }
 
-        $output .= '<input type="text" name="search" value="' . s($this->search, true) . '" size="20" />';
-        $output .= '<input type="submit" value="Search" />';
+        $output .= '<input type="text" name="search" value="'.s($this->search, true).'" size="20" />';
+        $output .= '<input type="submit" value="'.get_string('search').'" />';
+
         if (!empty($this->search)) {
-            $output .= '<input type="button" onclick="document.location=\'' . $this->baseurl .
-                 '&amp;sort=' . $this->sort . '&amp;dir=' . $this->dir . '&amp;perpage=' .
-                 $this->perpage . '\'"value="Show all users" />';
+            $output .= '<input type="button" onclick="document.location=\''.$this->baseurl.'&amp;sort='.$this->sort.'&amp;dir='.
+                       $this->dir.'&amp;perpage='.$this->perpage.'\'"value="'.get_string('showallusers', 'block_censusreport').'" />';
         }
         $output .= '</fieldset></form>';
         $output .= '</td></tr></table>';
@@ -682,10 +680,10 @@ class report {
     function print_footer() {
         $output = '';
 
-        $output .= print_paging_bar($this->numrecs, $this->page, $this->perpage,
-                                    "{$this->baseurl}&amp;sort={$this->sort}&amp;dir={$this->dir}&amp;" .
-                                    "perpage={$this->perpage}&amp;alpha={$this->alpha}&amp;search=" .
-                                    urlencode(stripslashes($this->search)) . "&amp;", 'page', false, true);
+        $url = $this->baseurl.'&amp;sort='.$this->sort.'&amp;dir='.$this->dir.'&amp;perpage='.$this->perpage.'&amp;alpha='.
+               $this->alpha.'&amp;search='.urlencode(stripslashes($this->search)).'&amp;';
+
+        $output .= print_paging_bar($this->numrecs, $this->page, $this->perpage, $url, 'page', false, true);
 
         return $output;
     }
@@ -696,8 +694,7 @@ class report {
      *
      * @TODO: This function must be extended in a subclass (using the same interface parameters).
      */
-    function main($sort = '', $dir = '', $page = 0, $perpage = 0, $search = '',
-                  $alpha = '', $download = '') {
+    function main($sort = '', $dir = '', $page = 0, $perpage = 0, $search = '', $alpha = '', $download = '') {
     /// To be extended.
     }
 }
