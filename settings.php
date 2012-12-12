@@ -22,7 +22,7 @@
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-if (! defined('CHECKBOX_ARRAY')) {
+if (!defined('CHECKBOX_ARRAY')) {
     define('CHECKBOX_ARRAY', 1);
     define('CHECKBOX',       2);
     define('TEXTBOX',        3);
@@ -30,24 +30,29 @@ if (! defined('CHECKBOX_ARRAY')) {
 
 $blockname = 'block_censusreport';
 
-$labels       = array('view' => get_string('view'),
-                      'pdf'  => get_string('pdf', $blockname),
-                      'csv'  => get_string('csv', $blockname));
-
-$fields = array(
-    'overrideinstances'         => CHECKBOX,
-    'showallstudents'           => CHECKBOX,
-    'showcoursename'            => CHECKBOX_ARRAY,
-    'showcoursecode'            => CHECKBOX_ARRAY,
-    'showcourseid'              => CHECKBOX_ARRAY,
-    'showstudentid'             => CHECKBOX_ARRAY,
-    'showteachername'           => CHECKBOX_ARRAY,
-    'showsignatureline'         => CHECKBOX_ARRAY,
-    'showdateline'              => CHECKBOX_ARRAY,
-    'footermessage'             => TEXTBOX,
+$labels = array(
+    'view' => get_string('view'),
+    'pdf'  => get_string('pdf', $blockname),
+    'csv'  => get_string('csv', $blockname)
 );
 
-$legacy = array('showcoursename' => array('view','pdf'), 'showcoursecode' => array('view', 'pdf'));
+$fields = array(
+    'overrideinstances' => CHECKBOX,
+    'showallstudents'   => CHECKBOX,
+    'showcoursename'    => CHECKBOX_ARRAY,
+    'showcoursecode'    => CHECKBOX_ARRAY,
+    'showcourseid'      => CHECKBOX_ARRAY,
+    'showstudentid'     => CHECKBOX_ARRAY,
+    'showteachername'   => CHECKBOX_ARRAY,
+    'showsignatureline' => CHECKBOX_ARRAY,
+    'showdateline'      => CHECKBOX_ARRAY,
+    'footermessage'     => TEXTBOX
+);
+
+$legacy = array(
+    'showcoursename' => array('view', 'pdf'),
+    'showcoursecode' => array('view', 'pdf')
+);
 
 foreach ($fields as $field => $type) {
     if ($field == 'showsignatureline') {
@@ -55,7 +60,9 @@ foreach ($fields as $field => $type) {
     } else if ($field == 'footermessage') {
         unset($labels['csv']);
     }
-    $name     = $blockname .'/'. $field;
+
+    $name  = $blockname .'/'. $field;
+
     switch ($type) {
         case CHECKBOX_ARRAY:
             $defaults = array();
@@ -67,7 +74,7 @@ foreach ($fields as $field => $type) {
                 }
             }
 
-            $settings->add(new admin_setting_configmulticheckbox($name, get_string($field, $blockname),
+            $settings->add(new admin_setting_configmulticheckbox($name, get_string($field, $blockname), 
                            get_string($field .'desc', $blockname), $defaults, $labels));
             break;
 

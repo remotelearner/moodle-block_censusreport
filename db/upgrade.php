@@ -32,9 +32,9 @@ function xmldb_block_censusreport_upgrade($oldversion = 0) {
     if ($oldversion < 2012051801) {
         $blockname = 'block_censusreport';
         foreach ($CFG as $cfgkey => $val) {
-            if (strpos($cfgkey,$blockname) === 0) {
-                $pluginkey = substr($cfgkey,strlen($blockname)+1);
-                set_config($pluginkey,$val,$blockname);
+            if (strpos($cfgkey, $blockname) === 0) {
+                $pluginkey = substr($cfgkey, strlen($blockname)+1);
+                set_config($pluginkey, $val, $blockname);
                 unset_config($cfgkey);
             }
         }

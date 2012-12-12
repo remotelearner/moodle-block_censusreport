@@ -38,15 +38,16 @@ if ($cid == SITEID) {
     $context = context_system::instance(0);
     $capability   = 'block/censusreport:accessallreports';
 } else {
-    if (! $course = $DB->get_record("course", array("id"=>$cid))) {
+    if (!$course = $DB->get_record('course', array('id' => $cid))) {
         print_error('cannotfindcourse');
     }
     require_login($course);
-    $context = context_course::instance($cid);
-    $capability   = 'block/censusreport:accesscoursereport';
+    $context    = context_course::instance($cid);
+    $capability = 'block/censusreport:accesscoursereport';
 }
 
 require_capability($capability, $context);
+
 $PAGE->set_url('/blocks/censusreport/report.php');
 $PAGE->set_context($context);
 $PAGE->set_title(get_string('setupquery', 'block_censusreport'));
@@ -62,10 +63,9 @@ if ($mform->is_cancelled()){
 }
 
 if ($formdata = $mform->get_data()) {
-
     $instance = null;
     if ($instanceid > 0) {
-        $instance      = $DB->get_record('block_instances', array('id'=>$instanceid));
+        $instance      = $DB->get_record('block_instances', array('id' => $instanceid));
     }
     $blockinstance = block_instance('censusreport', $instance);
     if ($action == CENSUS_ACTION_DLPDF) {
@@ -91,7 +91,7 @@ if ($formdata = $mform->get_data()) {
             echo $OUTPUT->box_start();
             $mform->display();
         }
-        notify(get_string('nodatafound','block_censusreport'), 'notifysuccess');
+        notify(get_string('nodatafound', 'block_censusreport'), 'notifysuccess');
     }
 
     if ($type === 'view') {

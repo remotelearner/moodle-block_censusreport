@@ -31,13 +31,13 @@ class block_censusreport_edit_form extends block_edit_form {
         $strpdf  = get_string('pdf', 'block_censusreport');
         $blockname  = 'block_censusreport';
         $checkboxes = array(
-                'showcoursename'    => array('view', 'csv', 'pdf'),
-                'showcoursecode'    => array('view', 'csv', 'pdf'),
-                'showcourseid'      => array('view', 'csv', 'pdf'),
-                'showstudentid'     => array('view', 'csv', 'pdf'),
-                'showteachername'   => array('view', 'csv', 'pdf'),
-                'showsignatureline' => array(    '', 'csv', 'pdf'),
-                'showdateline'      => array(    '', 'csv', 'pdf')
+            'showcoursename'    => array('view', 'csv', 'pdf'),
+            'showcoursecode'    => array('view', 'csv', 'pdf'),
+            'showcourseid'      => array('view', 'csv', 'pdf'),
+            'showstudentid'     => array('view', 'csv', 'pdf'),
+            'showteachername'   => array('view', 'csv', 'pdf'),
+            'showsignatureline' => array(    '', 'csv', 'pdf'),
+            'showdateline'      => array(    '', 'csv', 'pdf')
         );
         $defaults   = array('checkboxes' => 0, 'textfields' => '');
 
@@ -45,42 +45,41 @@ class block_censusreport_edit_form extends block_edit_form {
 
         $table_start =
             '<table>
-            <tr>
-                <td>'.get_string('setting', $blockname).'</td>
-                <td>'.$strview.'</td>
-                <td>'.$strcsv.'</td>
-                <td>'.$strpdf.'</td>
-            </tr>';
-        $mform->addElement('html',$table_start);
+             <tr>
+                 <td>'.get_string('setting', $blockname).'</td>
+                 <td>'.$strview.'</td>
+                 <td>'.$strcsv.'</td>
+                 <td>'.$strpdf.'</td>
+             </tr>';
+        $mform->addElement('html', $table_start);
 
         foreach ($checkboxes as $name => $row) {
-            $mform->addElement('html','<tr><td>'.get_string($name, $blockname).'</td>');
-            $defaults = get_config($blockname,$name);
+            $mform->addElement('html', '<tr><td>'.get_string($name, $blockname).'</td>');
+            $defaults = get_config($blockname, $name);
             $defaults = (!empty($defaults)) ? explode(',',$defaults) : array();
             foreach ($row as $field) {
                 $fieldname = $name.$field;
-                $mform->addElement('html','<td>');
+                $mform->addElement('html', '<td>');
                 if (!empty($field)) {
-                    $mform->addElement('advcheckbox','config_'.$fieldname,'');
+                    $mform->addElement('advcheckbox', 'config_'.$fieldname, '');
                     if (!isset($this->block->config->$fieldname)) {
-                        $default_val = (in_array($field,$defaults) === true) ? 1 : 0;
+                        $default_val = (in_array($field, $defaults) === true) ? 1 : 0;
                         $mform->setDefault('config_'.$fieldname, $default_val);
                     }
                 }
-                $mform->addElement('html','</td>');
+                $mform->addElement('html', '</td>');
             }
-            $mform->addElement('html','</tr>');
+            $mform->addElement('html', '</tr>');
         }
-        $mform->addElement('html','</table>');
+        $mform->addElement('html', '</table>');
 
-        $mform->addElement('advcheckbox','config_showallstudents',get_string('showallstudents', $blockname));
+        $mform->addElement('advcheckbox', 'config_showallstudents', get_string('showallstudents', $blockname));
         if (!isset($this->block->config->showallstudents)) {
-            $default = get_config($blockname,'showallstudents');
+            $default = get_config($blockname, 'showallstudents');
             $default = ($default == 1) ? (int)$default : 0;
             $mform->setDefault('config_showallstudents', $default);
         }
 
-        $mform->addElement('textarea','config_footermessagepdf',get_string('footermessage', $blockname));
+        $mform->addElement('textarea', 'config_footermessagepdf', get_string('footermessage', $blockname));
     }
 }
-

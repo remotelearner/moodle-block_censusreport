@@ -35,9 +35,8 @@ class block_censusreport extends block_base {
      * Init function
      */
     function init() {
-        $this->title   = get_string('pluginname','block_censusreport');
+        $this->title   = get_string('pluginname', 'block_censusreport');
     }
-
 
     /**
      * Get block content
@@ -65,9 +64,8 @@ class block_censusreport extends block_base {
 
         if ($access) {
             $this->content->text .= '<img src="'.$CFG->wwwroot.'/blocks/censusreport/pix/report.gif" /> ';
-            $this->content->text .= '<a href="'.$CFG->wwwroot.'/blocks/censusreport/report.php?id='
-                                      . $this->page->course->id .'&amp;instanceid='. $this->instance->id .'">'.
-                                        get_string('reportlink', 'block_censusreport').'</a>';
+            $this->content->text .= '<a href="'.$CFG->wwwroot.'/blocks/censusreport/report.php?id='.$this->page->course->id.
+                                    '&amp;instanceid='.$this->instance->id.'">'.get_string('reportlink', 'block_censusreport').'</a>';
         }
 
         $this->content->footer = '';
