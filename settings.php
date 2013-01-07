@@ -23,9 +23,20 @@
  */
 
 if (!defined('CHECKBOX_ARRAY')) {
+    /**
+     * CHECKBOX_ARRAY - Initidates whether a field is a multi-select checkbox element
+     */
     define('CHECKBOX_ARRAY', 1);
-    define('CHECKBOX',       2);
-    define('TEXTBOX',        3);
+
+    /**
+     * CHECKBOX - Initidates whether a field is a checkboxe element
+     */
+    define('CHECKBOX', 2);
+
+    /**
+     * TEXTBOX - Initidates whether a field is a text area element
+     */
+    define('TEXTBOX', 3);
 }
 
 $blockname = 'block_censusreport';
@@ -74,7 +85,7 @@ foreach ($fields as $field => $type) {
                 }
             }
 
-            $settings->add(new admin_setting_configmulticheckbox($name, get_string($field, $blockname), 
+            $settings->add(new admin_setting_configmulticheckbox($name, get_string($field, $blockname),
                            get_string($field .'desc', $blockname), $defaults, $labels));
             break;
 
