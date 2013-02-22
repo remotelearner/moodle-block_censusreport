@@ -1,7 +1,7 @@
 Block:   Census Report
-Date:    March 28th - 2011
-Version: 2012051802
-Release: 2.3.3.1
+Date:    February - 2013
+Version: 2013022215
+Release: 2.4.1
 
 The new version of the census report includes a number of different display options, which will
 be explained below.  In general each display option can be set in two locations.  There are local

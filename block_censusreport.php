@@ -57,7 +57,7 @@ class block_censusreport extends block_base {
         $access = false;
 
         if ($this->page->course->id == SITEID) {
-            $access = has_capability('block/censusreport:accessallreports', get_context_instance(CONTEXT_SYSTEM));
+            $access = has_capability('block/censusreport:accessallreports', context_system::instance());
         } else {
             $access = has_capability('block/censusreport:accesscoursereport', $this->page->context);
         }
