@@ -22,6 +22,10 @@
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+global $CFG;
+
+require_once($CFG->dirroot.'/blocks/censusreport/adminsetting.class.php');
+
 if (!defined('CHECKBOX_ARRAY')) {
     /**
      * CHECKBOX_ARRAY - Initidates whether a field is a multi-select checkbox element
@@ -37,6 +41,16 @@ if (!defined('CHECKBOX_ARRAY')) {
      * TEXTBOX - Initidates whether a field is a text area element
      */
     define('TEXTBOX', 3);
+
+    /**
+     * LINK - Initidates whether a field is a hyperlink
+     */
+    define('LINK', 4);
+
+    /**
+     * SELECTBOX - Initidates whether a field is select combo box
+     */
+    define('SELECTBOX', 5);
 }
 
 $blockname = 'block_censusreport';
@@ -57,7 +71,10 @@ $fields = array(
     'showteachername'   => CHECKBOX_ARRAY,
     'showsignatureline' => CHECKBOX_ARRAY,
     'showdateline'      => CHECKBOX_ARRAY,
-    'footermessage'     => TEXTBOX
+    'footermessage'     => TEXTBOX,
+    'uploadimage'       => LINK,
+    'headerimgname'     => SELECTBOX,
+    'logoimgname'       => SELECTBOX
 );
 
 $legacy = array(
@@ -93,6 +110,21 @@ foreach ($fields as $field => $type) {
             $default = isset($CFG->$name) ? $CFG->$name: 0;
             $settings->add(new admin_setting_configcheckbox($name, get_string($field, $blockname),
                            get_string($field .'desc', $blockname), $default, 1, 0));
+            break;
+
+        case SELECTBOX:
+            $optsarry = array('' => '');
+            foreach (get_directory_list($CFG->dataroot.'/blocks/censusreport/pix/'.rtrim($field, 'imgname')) as $imgfile) {
+                $optsarry[$imgfile] = $imgfile;
+            }
+            $settings->add(new admin_setting_configselect($name, get_string($field, $blockname),
+                           get_string($field, $blockname), '', $optsarry, '', true, false, true), 1, 0);
+            break;
+
+        case LINK:
+            $settings->add(new block_censusreport_admin_setting_upload($name,
+                           get_string($field, $blockname),
+                           get_string($field.'desc', $blockname), ''));
             break;
 
         case TEXTBOX:
