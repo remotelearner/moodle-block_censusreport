@@ -40,6 +40,16 @@ define('CENSUS_ACTION_DLPDF', 2);
  */
 define('CENSUS_ACTION_DLCSV', 3);
 
+/**
+ * REPORT_IMAGE_HEADER - represents the header image directory
+ */
+define('REPORT_IMAGE_HEADER', 'header');
+
+/**
+ * REPORT_IMAGE_LOGO - represents the logo image directory
+ */
+define('REPORT_IMAGE_LOGO', 'logo');
+
 class bcr_setup_query_form extends moodleform {
 
     protected $iid;

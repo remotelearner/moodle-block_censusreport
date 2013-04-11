@@ -50,7 +50,7 @@ class CR_PDF extends TCPDF {
      * @uses $CFG
      */
     function Header() {
-        global $CFG;
+        global $CFG, $DB;
 
         $this->setY(1);
         $this->SetFont('helvetica', '', $this->fontsize);
@@ -61,7 +61,10 @@ class CR_PDF extends TCPDF {
         $this->SetFont('helvetica', '', 9);
         $this->SetFillColor(225, 225, 225);
 
-        if (file_exists($CFG->dirroot.'/blocks/censusreport/pix/header_logo.jpg')) {
+        $curheaderimg = $DB->get_field('config_plugins', 'value', array('plugin' => 'block_censusreport', 'name' => 'headerimgname'), IGNORE_MISSING);
+        if ($curheaderimg !== '' && file_exists($CFG->dataroot.'/blocks/censusreport/pix/header/'.$curheaderimg)) {
+            $this->Image($CFG->dataroot.'/blocks/censusreport/pix/header/'.$curheaderimg, 0, 0, 9.486, 1.278);
+        } else if (file_exists($CFG->dirroot.'/blocks/censusreport/pix/header_logo.jpg')) {
             $this->Image($CFG->dirroot.'/blocks/censusreport/pix/header_logo.jpg', 0, 0, 9.486, 1.278, 'JPG');
         }
 
@@ -79,7 +82,7 @@ class CR_PDF extends TCPDF {
      * @uses $CFG
      */
     function Footer() {
-        global $CFG;
+        global $CFG, $DB;
 
         $this->SetY(-1.5);
 
@@ -100,9 +103,13 @@ class CR_PDF extends TCPDF {
             $this->line($x+1, $y-0.02, $x+3, $y-0.02);
         }
 
-        if (file_exists($CFG->dirroot.'/blocks/censusreport/pix/moodlelogo.jpg')) {
+        $curlogoimg = $DB->get_field('config_plugins', 'value', array('plugin' => 'block_censusreport', 'name' => 'logoimgname'), IGNORE_MISSING);
+        if ($curlogoimg !== '' && file_exists($CFG->dataroot.'/blocks/censusreport/pix/logo/'.$curlogoimg)) {
+            $this->Image($CFG->dataroot.'/blocks/censusreport/pix/logo/'.$curlogoimg, 4.0, 8.0);
+        } else if (file_exists($CFG->dirroot.'/blocks/censusreport/pix/moodlelogo.jpg')) {
             $this->Image($CFG->dirroot.'/blocks/censusreport/pix/moodlelogo.jpg', 4.0, 8.0);
         }
+
         $this->SetFont('helvetica', '', $this->fontsize - 2);
         $this->MultiCell(0, 0.2, $this->bottom, 0, $this->topalign);
         $this->Text(5.5, 8.25, $CFG->wwwroot);
