@@ -56,7 +56,9 @@ class bcr_setup_query_form extends moodleform {
 
         $mform->addElement('header', 'header', get_string('querytitle', 'block_censusreport'));
         $mform->addElement('hidden', 'instanceid', $this->iid);
+        $mform->setType('instanceid', PARAM_INT);
         $mform->addElement('hidden', 'id', $this->cid);
+        $mform->setType('id', PARAM_INT);
 
         if ($this->cid == SITEID) {
 
@@ -83,6 +85,7 @@ class bcr_setup_query_form extends moodleform {
             }
 
             $mform->addElement('hidden', 'course', $this->cid);
+            $mform->setType('course', PARAM_INT);
             $mform->addElement('static', 'course_label', get_string('course', 'block_censusreport'), $course->fullname);
 
             if (($grouprecs = groups_get_all_groups($course->id, 0, 0, 'g.id, g.name'))) {
