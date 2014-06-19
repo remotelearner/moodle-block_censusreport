@@ -536,7 +536,7 @@ function bcr_build_grades_array($courseid, $useridorids = 0, $startdate = 0, $en
         $result->userid      = $record->userid;
         $result->lastname    = $record->lastname;
         $result->firstname   = $record->firstname;
-        $result->student     = fullname($record);
+        $result->student     = fullname($DB->get_record('user', array('id' => $record->userid)));
         $result->studentid   = $record->idnumber;
         $result->activity    = $record->itemname;
         $result->grade       = $grade;
@@ -594,7 +594,7 @@ function bcr_build_grades_array($courseid, $useridorids = 0, $startdate = 0, $en
             $result->userid      = $record->userid;
             $result->lastname    = $record->lastname;
             $result->firstname   = $record->firstname;
-            $result->student     = fullname($record);
+            $result->student     = fullname($DB->get_record('user', array('id' => $record->userid)));
             $result->studentid   = $record->idnumber;
             $result->activity    = $record->itemname;
             $result->grade       = grade_format_gradevalue($record->finalgrade, $gis[$record->giid]);
@@ -664,7 +664,7 @@ function bcr_build_grades_array($courseid, $useridorids = 0, $startdate = 0, $en
             $result->userid      = $record->userid;
             $result->lastname    = $record->lastname;
             $result->firstname   = $record->firstname;
-            $result->student     = fullname($record);
+            $result->student     = fullname($DB->get_record('user', array('id' => $record->userid)));
             $result->studentid   = $record->idnumber;
             $result->activity    = $record->itemname;
             $result->grade       = $grade;
@@ -724,7 +724,7 @@ function bcr_build_grades_array($courseid, $useridorids = 0, $startdate = 0, $en
             $result->userid      = $record->userid;
             $result->lastname    = $record->lastname;
             $result->firstname   = $record->firstname;
-            $result->student     = fullname($record);
+            $result->student     = fullname($DB->get_record('user', array('id' => $record->userid)));
             $result->studentid   = $record->idnumber;
             $result->activity    = $record->itemname;
             $result->grade       = $grade;
@@ -783,7 +783,7 @@ function bcr_build_grades_array($courseid, $useridorids = 0, $startdate = 0, $en
             $result->userid      = $record->userid;
             $result->lastname    = $record->lastname;
             $result->firstname   = $record->firstname;
-            $result->student     = fullname($record);
+            $result->student     = fullname($DB->get_record('user', array('id' => $record->userid)));
             $result->studentid   = $record->idnumber;
             $result->activity    = $record->itemname;
             $result->grade       = $grade;
@@ -820,7 +820,7 @@ function bcr_build_grades_array($courseid, $useridorids = 0, $startdate = 0, $en
                 $result->userid      = $record->userid;
                 $result->lastname    = $record->lastname;
                 $result->firstname   = $record->firstname;
-                $result->student     = fullname($record);
+                $result->student     = fullname($DB->get_record('user', array('id' => $record->userid)));
                 $result->studentid   = $record->idnumber;
                 $result->activity    = get_string('noactivitycompleted', 'block_censusreport');
                 $result->grade       = get_string('nograde', 'block_censusreport');
