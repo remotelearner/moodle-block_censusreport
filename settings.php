@@ -114,7 +114,14 @@ foreach ($fields as $field => $type) {
 
         case SELECTBOX:
             $optsarry = array('' => '');
-            foreach (get_directory_list($CFG->dataroot.'/blocks/censusreport/pix/'.rtrim($field, 'imgname')) as $imgfile) {
+            $newfield = $field;
+            // Remove the last occurrence of the "imgname" string from $field unless it's the entire string.
+            if ($field !== 'imgname') {
+                if (strpos(strrev($field), strrev('imgname')) === 0) {
+                    $newfield = strrev(substr(strrev($field), strlen('imgname')));
+                }
+            }
+            foreach (get_directory_list($CFG->dataroot.'/blocks/censusreport/pix/'.$newfield) as $imgfile) {
                 $optsarry[$imgfile] = $imgfile;
             }
             $settings->add(new admin_setting_configselect($name, get_string($field, $blockname),
