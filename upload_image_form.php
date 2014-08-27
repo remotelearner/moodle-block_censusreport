@@ -72,11 +72,11 @@ class block_censusreport_upload_image_form extends moodleform {
         if ($files) {
             foreach ($files as $file) {
                 if (!in_array($file->get_mimetype(), $supportedtypes)) {
-                    $errors['censusreportimage'] = get_string('unsupportedfiletype', 'censusreport');
+                    $errors['censusreportimage'] = get_string('invalidfiletype', 'error', $file->get_filename());
                 }
             }
         } else {
-            $errors['censusreportimage'] = get_string('nofileselected', 'censusreport');
+            $errors['censusreportimage'] = get_string('uploadnofilefound');
         }
 
         return $errors;
