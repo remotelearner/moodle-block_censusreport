@@ -118,7 +118,7 @@ foreach ($fields as $field => $type) {
                 $optsarry[$imgfile] = $imgfile;
             }
             $settings->add(new admin_setting_configselect($name, get_string($field, $blockname),
-                           get_string($field, $blockname), '', $optsarry, '', true, false, true), 1, 0);
+                           get_string($field, $blockname), '', $optsarry));
             break;
 
         case LINK:
