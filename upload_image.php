@@ -55,7 +55,7 @@ if ($upload_form->is_cancelled()) {
     make_upload_directory($uploaddir);
     $destination = $CFG->dataroot.'/'.$uploaddir.'/'.$filename;
     if (!$upload_form->save_file('censusreportimage', $destination, true)) {
-        print_errror($struploaderror);
+        print_error($struploaderror);
     }
 
     redirect(new moodle_url('/admin/settings.php?section=blocksettingcensusreport'), get_string('changessaved'));
