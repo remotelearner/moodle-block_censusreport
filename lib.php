@@ -302,7 +302,7 @@ function bcr_generate_report($block, $formdata, $type = 'view') {
 
         echo html_writer::table($table);
 
-        echo '<br /><br /><div align="center"><a href="'.$CFG->wwwroot.'/blocks/censusreport/report.php?id='.$formdata->id. 
+        echo '<br /><br /><div align="center"><a href="'.$CFG->wwwroot.'/blocks/censusreport/report.php?id='.$formdata->id.
              ((isset($block->instance) && !empty($block->instance)) ? '&instanceid='.$block->instance->id : '').'">'.
              get_string('backtoreports', 'block_censusreport').'</a></div>';
 
@@ -478,7 +478,8 @@ function bcr_build_grades_array($courseid, $useridorids = 0, $startdate = 0, $en
     }
 
     // Pass #1 - Search through grade_grades_history data for user submissions within the date range
-    $sql = "SELECT u.id AS userid, u.lastname, u.firstname, u.idnumber, ggh.timemodified
+    $usernamefieldsql = get_all_user_name_fields(true, 'u');
+    $sql = "SELECT u.id AS userid, $usernamefieldsql, u.idnumber, ggh.timemodified
               FROM {grade_items} gi
         INNER JOIN {grade_grades_history} ggh ON ggh.itemid = gi.id
         INNER JOIN {role_assignments} ra ON ra.userid = ggh.userid
@@ -508,6 +509,7 @@ function bcr_build_grades_array($courseid, $useridorids = 0, $startdate = 0, $en
 
     $rs = $DB->get_recordset_sql($sql, $dbparams);
 
+    $usernamefields = get_all_user_name_fields();
     foreach ($rs as $user) {
         // Find the first submission by that user
         $record = bcr_check_grades_histories_initial_submission($user->userid, $startdate, $enddate, $courseid);
@@ -516,8 +518,9 @@ function bcr_build_grades_array($courseid, $useridorids = 0, $startdate = 0, $en
             continue; // This shouldn't happen
         }
 
-        $record->lastname  = $user->lastname;
-        $record->firstname = $user->firstname;
+        foreach ($usernamefields as $usernamefield) {
+            $record->$usernamefield = $user->$usernamefield;
+        }
         $record->idnumber  = $user->idnumber;
 
         if (empty($gis[$record->giid])) {
@@ -534,8 +537,9 @@ function bcr_build_grades_array($courseid, $useridorids = 0, $startdate = 0, $en
 
         $result = new stdClass;
         $result->userid      = $record->userid;
-        $result->lastname    = $record->lastname;
-        $result->firstname   = $record->firstname;
+        foreach ($usernamefields as $usernamefield) {
+                $result->$usernamefield = $record->$usernamefield;
+        }
         $result->student     = fullname($record);
         $result->studentid   = $record->idnumber;
         $result->activity    = $record->itemname;
@@ -548,7 +552,7 @@ function bcr_build_grades_array($courseid, $useridorids = 0, $startdate = 0, $en
     unset($rs);
 
     // Pass #2 - Get general grade item records from the DB and compare dates with grade_grades_history entries
-    $sql = "SELECT gg.id, gi.id AS giid, u.id AS userid, u.firstname, u.lastname, u.idnumber, gi.itemname,
+    $sql = "SELECT gg.id, gi.id AS giid, u.id AS userid, $usernamefieldsql, u.idnumber, gi.itemname,
                    gg.finalgrade, gg.timecreated, gg.timemodified
               FROM {grade_items} gi
         INNER JOIN {grade_grades} gg ON gg.itemid = gi.id
@@ -592,8 +596,9 @@ function bcr_build_grades_array($courseid, $useridorids = 0, $startdate = 0, $en
         if (empty($results[$record->userid])) {
             $result = new stdClass;
             $result->userid      = $record->userid;
-            $result->lastname    = $record->lastname;
-            $result->firstname   = $record->firstname;
+            foreach ($usernamefields as $usernamefield) {
+                $result->$usernamefield = $record->$usernamefield;
+            }
             $result->student     = fullname($record);
             $result->studentid   = $record->idnumber;
             $result->activity    = $record->itemname;
@@ -612,7 +617,7 @@ function bcr_build_grades_array($courseid, $useridorids = 0, $startdate = 0, $en
     unset($rs);
 
     // Pass #3 - Get any graded forum post records from the DB
-    $sql = "SELECT u.id AS userid, fp.id AS postid, gi.id AS giid, u.firstname, u.lastname, u.idnumber,
+    $sql = "SELECT u.id AS userid, fp.id AS postid, gi.id AS giid, $usernamefieldsql, u.idnumber,
                    fp.message, gi.itemname, gg.finalgrade, fp.created AS timecreated
               FROM {forum_posts} fp
         INNER JOIN {forum_discussions} fd ON fd.id = fp.discussion
@@ -662,8 +667,9 @@ function bcr_build_grades_array($courseid, $useridorids = 0, $startdate = 0, $en
 
             $result = new stdClass;
             $result->userid      = $record->userid;
-            $result->lastname    = $record->lastname;
-            $result->firstname   = $record->firstname;
+            foreach ($usernamefields as $usernamefield) {
+                $result->$usernamefield = $record->$usernamefield;
+            }
             $result->student     = fullname($record);
             $result->studentid   = $record->idnumber;
             $result->activity    = $record->itemname;
@@ -677,7 +683,7 @@ function bcr_build_grades_array($courseid, $useridorids = 0, $startdate = 0, $en
     unset($rs);
 
     // Pass #4 - Get any graded glossary entries from the DB
-    $sql = "SELECT u.id AS userid, ent.id AS entid, gi.id AS giid, u.firstname, u.lastname, u.idnumber, gi.itemname,
+    $sql = "SELECT u.id AS userid, ent.id AS entid, gi.id AS giid, $usernamefieldsql, u.idnumber, gi.itemname,
                    gg.finalgrade, ent.timecreated AS timecreated
               FROM {glossary_entries} ent
         INNER JOIN {glossary} glos ON ent.glossaryid = glos.id
@@ -722,8 +728,9 @@ function bcr_build_grades_array($courseid, $useridorids = 0, $startdate = 0, $en
 
             $result = new stdClass;
             $result->userid      = $record->userid;
-            $result->lastname    = $record->lastname;
-            $result->firstname   = $record->firstname;
+            foreach ($usernamefields as $usernamefield) {
+                $result->$usernamefield = $record->$usernamefield;
+            }
             $result->student     = fullname($record);
             $result->studentid   = $record->idnumber;
             $result->activity    = $record->itemname;
@@ -737,7 +744,7 @@ function bcr_build_grades_array($courseid, $useridorids = 0, $startdate = 0, $en
     unset($rs);
 
     // Pass #5 - Get any graded assignment entries from the DB (if they weren't in histories)
-    $sql = "SELECT u.id AS userid, s.id AS entid, gi.id AS giid, u.firstname, u.lastname, u.idnumber,
+    $sql = "SELECT u.id AS userid, s.id AS entid, gi.id AS giid, $usernamefieldsql, u.idnumber,
                    gi.itemname, gg.finalgrade, s.timemodified AS timecreated
               FROM {assignment_submissions} s
         INNER JOIN {assignment} a ON s.assignment = a.id
@@ -781,8 +788,9 @@ function bcr_build_grades_array($courseid, $useridorids = 0, $startdate = 0, $en
 
             $result = new stdClass;
             $result->userid      = $record->userid;
-            $result->lastname    = $record->lastname;
-            $result->firstname   = $record->firstname;
+            foreach ($usernamefields as $usernamefield) {
+                $result->$usernamefield = $record->$usernamefield;
+            }
             $result->student     = fullname($record);
             $result->studentid   = $record->idnumber;
             $result->activity    = $record->itemname;
@@ -797,7 +805,7 @@ function bcr_build_grades_array($courseid, $useridorids = 0, $startdate = 0, $en
 
     // Add in users without activity if desired
     if ($showallstudents === true) {
-        $sql = "SELECT u.id as userid, u.lastname, u.firstname, u.idnumber
+        $sql = "SELECT u.id as userid, $usernamefieldsql, u.idnumber
                   FROM {user} u
             INNER JOIN {role_assignments} ra ON ra.userid = u.id
             $groupjoin
@@ -818,8 +826,9 @@ function bcr_build_grades_array($courseid, $useridorids = 0, $startdate = 0, $en
             if (empty($results[$record->userid])) {
                 $result = new stdClass;
                 $result->userid      = $record->userid;
-                $result->lastname    = $record->lastname;
-                $result->firstname   = $record->firstname;
+                foreach ($usernamefields as $usernamefield) {
+                    $result->$usernamefield = $record->$usernamefield;
+                }
                 $result->student     = fullname($record);
                 $result->studentid   = $record->idnumber;
                 $result->activity    = get_string('noactivitycompleted', 'block_censusreport');
