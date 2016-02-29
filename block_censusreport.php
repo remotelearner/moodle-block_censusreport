@@ -34,7 +34,7 @@ class block_censusreport extends block_base {
     /**
      * Init function
      */
-    function init() {
+    public function init() {
         $this->title   = get_string('pluginname', 'block_censusreport');
     }
 
@@ -44,7 +44,7 @@ class block_censusreport extends block_base {
      * @return string The block content
      * @uses $CFG
      */
-    function get_content() {
+    public function get_content() {
         global $CFG;
 
         if ($this->content !== NULL) {
@@ -77,7 +77,7 @@ class block_censusreport extends block_base {
      *
      * @return bool true
      */
-    function instance_allow_config() {
+    public function instance_allow_config() {
         return true;
     }
 
@@ -86,7 +86,7 @@ class block_censusreport extends block_base {
      *
      * @return bool true
      */
-    function has_config() {
+    public function has_config() {
         return true;
     }
 
@@ -97,7 +97,7 @@ class block_censusreport extends block_base {
      * @return bool Whether to show the field
      * @uses $CFG
      */
-    function check_field_status($field, $type='') {
+    public function check_field_status($field, $type='') {
         $blockname     = 'block_censusreport';
         $blockoverride = 'overrideinstances';
         $status        = false;

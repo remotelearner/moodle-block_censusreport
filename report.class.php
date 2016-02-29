@@ -60,7 +60,7 @@ class report {
      * @param string $id An identifier for this table (optional).
      * @retrn none
      */
-    function report($id = '') {
+    public function __construct($id = '') {
         $this->id            = $id;
         $this->table         = new stdClass;
         $this->columns       = array();
@@ -103,7 +103,7 @@ class report {
      * @param bool   $wrap     If set to true the column will not automatically wrap.
      * @return bool True on success, False otherwise.
      */
-    function add_column($id, $name, $align = 'left', $sortable = false, $wrap = false) {
+    public function add_column($id, $name, $align = 'left', $sortable = false, $wrap = false) {
         if ($align != 'left' || $align != 'center' || $align != 'right') {
             $align = 'left';
         }
@@ -118,7 +118,7 @@ class report {
     /**
      * Set the title of this report (only really used in a PDF download
      */
-    function set_title($title) {
+    public function set_title($title) {
         $this->title = $title;
     }
 
@@ -129,7 +129,7 @@ class report {
      * @param string $column The column ID.
      * @param string $dir    The sort direction (ASC, DESC).
      */
-    function set_default_sort($column, $dir = 'ASC') {
+    public function set_default_sort($column, $dir = 'ASC') {
         if (!isset($this->headers[$column]) || !$this->sortable[$column]) {
             return false;
         }
@@ -151,7 +151,7 @@ class report {
      * @param string $url The base URL.
      * @return none
      */
-    function set_baseurl($url) {
+    public function set_baseurl($url) {
         $this->baseurl = $url;
     }
 
@@ -162,7 +162,7 @@ class report {
      * @param string $url The paging URL.
      * @return none
      */
-    function set_pageurl($url) {
+    public function set_pageurl($url) {
         $this->pageurl = $url;
     }
 
@@ -172,7 +172,7 @@ class report {
      *
      * @TODO: This function must be extended in a subclass.
      */
-    function get_data() {
+    public function get_data() {
     /// This function must be extended to load data into the table.
     }
 
@@ -187,7 +187,7 @@ class report {
     /**
      * Display the table with data.
      */
-    function display() {
+    public function display() {
         global $CFG;
 
         $output = '';
@@ -255,7 +255,7 @@ class report {
      *
      * @param string $format A valid format type.
      */
-    function download($format) {
+    public function download($format) {
         global $CFG;
 
         $output = '';
@@ -517,7 +517,7 @@ class report {
     }
 
 
-    function pdf_output($pdf, $name = '', $dest = '') {
+    public function pdf_output($pdf, $name = '', $dest = '') {
         ob_start();
         //Output PDF to some destination
         //Normalize parameters
@@ -549,9 +549,9 @@ class report {
      * @param string $input The input string.
      * @return string A CSV export 'safe' string.
      */
-    function csv_escape_string($input) {
-        $input = ereg_replace("[\r\n\t]", ' ', $input);
-        $input = ereg_replace('"', '""', $input);
+    public function csv_escape_string($input) {
+        $input = preg_replace("[\r\n\t]", ' ', $input);
+        $input = preg_replace('"', '""', $input);
         $input = '"'.$input.'"';
 
         return $input;
@@ -564,7 +564,7 @@ class report {
      * @param none
      * @return string HTML output for display.
      */
-    function print_download_menu() {
+    public function print_download_menu() {
         $output = '';
 
         if (!empty($this->fileformats)) {
@@ -605,7 +605,7 @@ class report {
      * @param none
      * @return string HTML output for display.
      */
-    function print_header() {
+    public function print_header() {
         $output = '';
 
         $alphabet = explode(',', get_string('alphabet'));
@@ -677,7 +677,7 @@ class report {
      * @param none
      * @return string HTML output for display.
      */
-    function print_footer() {
+    public function print_footer() {
         $output = '';
 
         $url = $this->baseurl.'&amp;sort='.$this->sort.'&amp;dir='.$this->dir.'&amp;perpage='.$this->perpage.'&amp;alpha='.
@@ -694,7 +694,7 @@ class report {
      *
      * @TODO: This function must be extended in a subclass (using the same interface parameters).
      */
-    function main($sort = '', $dir = '', $page = 0, $perpage = 0, $search = '', $alpha = '', $download = '') {
+    public function main($sort = '', $dir = '', $page = 0, $perpage = 0, $search = '', $alpha = '', $download = '') {
     /// To be extended.
     }
 }
