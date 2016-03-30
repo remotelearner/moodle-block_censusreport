@@ -105,7 +105,7 @@ class CR_PDF extends TCPDF {
 
         $curlogoimg = $DB->get_field('config_plugins', 'value', array('plugin' => 'block_censusreport', 'name' => 'logoimgname'), IGNORE_MISSING);
         if ($curlogoimg !== '' && file_exists($CFG->dataroot.'/blocks/censusreport/pix/logo/'.$curlogoimg)) {
-            $this->Image($CFG->dataroot.'/blocks/censusreport/pix/logo/'.$curlogoimg, 4.0, 8.0);
+            $this->Image($CFG->dataroot.'/blocks/censusreport/pix/logo/'.$curlogoimg, 4.0, 8.0, 0, 0.425);
         } else if (file_exists($CFG->dirroot.'/blocks/censusreport/pix/moodlelogo.jpg')) {
             $this->Image($CFG->dirroot.'/blocks/censusreport/pix/moodlelogo.jpg', 4.0, 8.0);
         }
