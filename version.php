@@ -14,8 +14,8 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
-$plugin->version  = 2015103000;  // The current block version (Date: YYYYMMDDXX)
+$plugin->version  = 2015103001;  // The current block version (Date: YYYYMMDDXX)
 $plugin->requires = 2015101600;  // Requires this Moodle version
 $plugin->maturity = MATURITY_STABLE;
-$plugin->release  = '3.0.0.0';
+$plugin->release  = '3.0.0.1';
 $plugin->component = 'block_censusreport';
