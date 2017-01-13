@@ -50,6 +50,7 @@ define('REPORT_IMAGE_HEADER', 'header');
  */
 define('REPORT_IMAGE_LOGO', 'logo');
 
+
 class bcr_setup_query_form extends moodleform {
 
     protected $iid;
@@ -57,13 +58,12 @@ class bcr_setup_query_form extends moodleform {
     function __construct($actionurl, $iid, $cid) {
         $this->iid = $iid;
         $this->cid = $cid;
-        parent::moodleform($actionurl);
+        parent::__construct();
     }
 
     function definition() {
         global $DB, $CFG;
         $mform =& $this->_form;
-
         $mform->addElement('header', 'header', get_string('querytitle', 'block_censusreport'));
         $mform->addElement('hidden', 'instanceid', $this->iid);
         $mform->setType('instanceid', PARAM_INT);
@@ -268,7 +268,7 @@ function bcr_generate_report($block, $formdata, $type = 'view') {
             }
             $table->data[] = $datum;
 
-            $pdatm = new Object();
+            $pdatm = new stdClass();
             $pdatm->student   = $result->student;
             $pdatm->studentid = $result->studentid;
             $pdatm->activity  = $result->activity;

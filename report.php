@@ -54,7 +54,6 @@ $PAGE->set_title(get_string('setupquery', 'block_censusreport'));
 $PAGE->set_heading($SITE->fullname);
 $PAGE->set_pagelayout('incourse');
 $PAGE->navbar->add(get_string('reportlink', 'block_censusreport'));
-
 $mform = new bcr_setup_query_form($PAGE->url, $instanceid, $cid);
 
 if ($mform->is_cancelled()){
@@ -91,7 +90,7 @@ if ($formdata = $mform->get_data()) {
             echo $OUTPUT->box_start();
             $mform->display();
         }
-        notify(get_string('nodatafound', 'block_censusreport'), 'notifysuccess');
+        echo $OUTPUT->notification(get_string('nodatafound','block_censusreport'),'');
     }
 
     if ($type === 'view') {
