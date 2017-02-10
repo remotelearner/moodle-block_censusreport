@@ -491,6 +491,7 @@ function bcr_build_grades_array($courseid, $useridorids = 0, $startdate = 0, $en
                AND ra.contextid = :contextid
                AND ra.roleid = :roleid
                AND u.deleted = 0
+               AND ggh.source != 'system'
                $groupwhere
           ORDER BY ggh.timemodified ASC, u.lastname ASC, u.firstname ASC";
 
@@ -866,6 +867,7 @@ function bcr_check_grades_histories_initial_submission($userid, $startdate, $end
                AND gi.itemtype = 'mod'
                AND ggh.timemodified >= :timestart
                AND ggh.timemodified < :timeend
+               AND ggh.source != 'system'
           GROUP BY gi.id, ggh.id, ggh.userid, gi.itemname, ggh.finalgrade, ggh.timemodified
           ORDER BY ggh.timemodified ASC";
 
