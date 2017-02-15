@@ -57,7 +57,7 @@ class bcr_setup_query_form extends moodleform {
     function __construct($actionurl, $iid, $cid) {
         $this->iid = $iid;
         $this->cid = $cid;
-        parent::moodleform($actionurl);
+        parent::__construct();
     }
 
     function definition() {
@@ -268,7 +268,7 @@ function bcr_generate_report($block, $formdata, $type = 'view') {
             }
             $table->data[] = $datum;
 
-            $pdatm = new Object();
+            $pdatm = new stdClass();
             $pdatm->student   = $result->student;
             $pdatm->studentid = $result->studentid;
             $pdatm->activity  = $result->activity;
